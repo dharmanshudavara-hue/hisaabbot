@@ -94,8 +94,10 @@ User Transcript: "${transcript}"`;
 
     let parsed;
     try {
-      parsed = JSON.parse(content);
-    } catch {
+      // Strip markdown code blocks in case the AI returns them
+      const cleaned = content.replace(/```json/gi, '').replace(/```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
       console.error('Failed to parse AI response:', content);
       return NextResponse.json(
         { error: 'Failed to parse AI response', raw: content },

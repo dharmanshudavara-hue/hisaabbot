@@ -109,6 +109,24 @@ export default function HomePage() {
           return;
         }
 
+        // Handle AI clarification questions or errors
+        if (data.type === 'error') {
+          setStatus('error');
+          const errorMsg = data.summary || (
+            language === 'hindi' ? 'मुझे समझ नहीं आया, कृपया फिर से बोलें' :
+            language === 'gujarati' ? 'મને સમજાયું નહીં, કૃપા કરીને ફરી બોલો' :
+            'I could not understand, please try again'
+          );
+          setDisplayText(errorMsg);
+          await speak(errorMsg, language);
+          setTimeout(() => {
+            setStatus('idle');
+            setDisplayText('');
+            setParsedData(null);
+          }, 4000);
+          return;
+        }
+
         // Save transaction
         if (data.amount && data.amount > 0) {
           const saved = await addTransaction({
