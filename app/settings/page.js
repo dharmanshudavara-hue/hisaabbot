@@ -95,9 +95,9 @@ export default function SettingsPage() {
     } catch (err) {
       console.error('Sync error:', err);
       showToast(
-        language === 'hindi' ? 'सिंक विफल: कृपया .env.local जांचें' :
-        language === 'gujarati' ? 'સિંક નિષ્ફળ: કૃપા કરીને .env.local તપાસો' :
-        'Sync failed: check .env.local keys'
+        language === 'hindi' ? `सिंक विफल: ${err.message}` :
+        language === 'gujarati' ? `સિંક નિષ્ફળ: ${err.message}` :
+        `Sync failed: ${err.message}`
       );
     }
     setSyncing(false);
