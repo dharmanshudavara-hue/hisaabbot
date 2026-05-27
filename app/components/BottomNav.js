@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MicIcon, WalletIcon, BellIcon, ChartIcon } from './Icons';
+import { MicIcon, WalletIcon, BellIcon, ChartIcon, SettingsIcon } from './Icons';
 
 const navItems = [
   { href: '/', icon: MicIcon, label: 'Voice' },
   { href: '/loans', icon: WalletIcon, label: 'Loans' },
   { href: '/alerts', icon: BellIcon, label: 'Alerts' },
   { href: '/reports', icon: ChartIcon, label: 'Reports' },
+  { href: '/settings', icon: SettingsIcon, label: 'Settings' },
 ];
 
 export default function BottomNav() {

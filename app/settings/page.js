@@ -5,7 +5,8 @@ import Link from 'next/link';
 import BottomNav from '../components/BottomNav';
 import {
   SettingsIcon, GlobeIcon, ShieldIcon, InfoIcon,
-  DownloadIcon, XCircleIcon, ChevronRightIcon, CloudIcon
+  DownloadIcon, XCircleIcon, ChevronRightIcon, CloudIcon,
+  UsersIcon, LockIcon
 } from '../components/Icons';
 import { getSetting, setSetting, getAllTransactions, syncWithSupabase } from '../../lib/db';
 
@@ -13,6 +14,8 @@ export default function SettingsPage() {
   const [language, setLanguage] = useState('hindi');
   const [transactionCount, setTransactionCount] = useState(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showCaretakerPin, setShowCaretakerPin] = useState(false);
+  const [pinInput, setPinInput] = useState('');
   const [clearing, setClearing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [toast, setToast] = useState(null);
@@ -98,6 +101,15 @@ export default function SettingsPage() {
       );
     }
     setSyncing(false);
+  };
+
+  const handlePinSubmit = () => {
+    if (pinInput === '1234') {
+      window.location.href = '/caretaker';
+    } else {
+      showToast('Incorrect PIN');
+      setPinInput('');
+    }
   };
 
   const showToast = (message) => {
@@ -215,6 +227,23 @@ export default function SettingsPage() {
             <ChevronRightIcon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           </div>
 
+          <div className="settings-item" onClick={() => setShowCaretakerPin(true)} id="caretaker-mode" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+            <UsersIcon size={22} style={{ color: 'var(--amber-400)' }} />
+            <div className="info">
+              <div className="title">
+                {language === 'hindi' ? 'केयरटेकर मोड' :
+                 language === 'gujarati' ? 'કેરટેકર મોડ' :
+                 'Caretaker Mode'}
+              </div>
+              <div className="desc">
+                {language === 'hindi' ? 'सभी लेनदेन की विस्तृत समीक्षा करें' :
+                 language === 'gujarati' ? 'બધા વ્યવહારની વિગતવાર સમીક્ષા કરો' :
+                 'Detailed review of all transactions'}
+              </div>
+            </div>
+            <LockIcon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          </div>
+
           <div
             className="settings-item"
             onClick={() => setShowClearConfirm(true)}
@@ -307,6 +336,60 @@ export default function SettingsPage() {
               >
                 {clearing ? '...'
                   : (language === 'hindi' ? 'हां, मिटाएं' : language === 'gujarati' ? 'હા, કાઢી નાખો' : 'Yes, Clear')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Caretaker PIN Modal */}
+      {showCaretakerPin && (
+        <div className="overlay" onClick={() => setShowCaretakerPin(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle" />
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <LockIcon size={48} style={{ color: 'var(--amber-400)', marginBottom: 12 }} />
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: 8 }}>
+                {language === 'hindi' ? 'केयरटेकर पिन दर्ज करें' :
+                 language === 'gujarati' ? 'કેરટેકર પિન દાખલ કરો' :
+                 'Enter Caretaker PIN'}
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                {language === 'hindi' ? 'डिफ़ॉल्ट पिन: 1234' :
+                 language === 'gujarati' ? 'ડિફૉલ્ટ પિન: 1234' :
+                 'Default PIN: 1234'}
+              </p>
+              <input
+                type="password"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                placeholder="****"
+                style={{
+                  marginTop: 16, width: '100%', padding: '12px', fontSize: '1.5rem',
+                  textAlign: 'center', letterSpacing: '0.5em',
+                  background: 'var(--bg-secondary)', border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-md)', color: 'var(--text-primary)'
+                }}
+                maxLength={4}
+                autoFocus
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setShowCaretakerPin(false)}
+              >
+                {language === 'hindi' ? 'रद्द करें' : language === 'gujarati' ? 'રદ કરો' : 'Cancel'}
+              </button>
+              <button
+                className="btn"
+                style={{
+                  flex: 1, background: 'var(--green-500)', color: 'white',
+                }}
+                onClick={handlePinSubmit}
+              >
+                {language === 'hindi' ? 'प्रवेश करें' : language === 'gujarati' ? 'પ્રવેશ કરો' : 'Enter'}
               </button>
             </div>
           </div>

@@ -3,33 +3,36 @@ import { NextResponse } from 'next/server';
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-const SYSTEM_PROMPT = `You are a financial assistant that extracts structured data from Hindi, Gujarati, and English speech transcripts. 
+const SYSTEM_PROMPT = `You are an intelligent, empathetic financial assistant that extracts structured data and answers questions from Hindi, Gujarati, and English speech transcripts. 
 
 IMPORTANT RULES:
-1. Always respond with ONLY valid JSON — no markdown, no explanation, no extra text.
-2. Extract these fields:
-   - type: "lent" (user gave money TO someone), "borrowed" (user took money FROM someone), or "expense" (user spent money on something)
-   - person_name: string or null (null for expenses)
-   - amount: number in INR (rupees). Convert words like "paanch sau" to 500, "hazaar" to 1000, etc.
-   - due_date: "YYYY-MM-DD" or null. Convert relative dates like "2 hafte" (2 weeks), "1 mahina" (1 month) to actual dates from today.
-   - category: For expenses only — one of: "food", "transport", "medicine", "house", "business", "other". null for loans.
-   - confidence: number 0-1 indicating how confident you are in the extraction.
-   - summary: A short confirmation sentence in the SAME language as the input.
+1. Always respond with ONLY valid JSON — no markdown, no explanation.
+2. If the user is reporting a new transaction, extract these fields:
+   - type: "lent", "borrowed", or "expense"
+   - person_name: string or null
+   - amount: number in INR
+   - due_date: "YYYY-MM-DD" or null.
+   - category: For expenses only ("food", "transport", "medicine", "house", "business", "other").
+   - summary: A short, natural, empathetic confirmation in the SAME language as the input. (e.g., "Got it, added 500 rupees to food.")
+   - confidence: 0-1
 
-3. For Hindi: "diya" / "diye" = lent, "liya" / "liye" = borrowed, "kharch" / "gaye" = expense
-4. For Gujarati: "aapya" = lent, "lidha" = borrowed, "kharcho" = expense  
-5. If you can't determine a required field, set confidence below 0.5 and include what you could extract.
-6. For queries like "kaun mujhe paisa dega?" or "kitna udhar hai?" — set type to "query" and include query_type: "outstanding_lent" or "outstanding_borrowed" or "daily_expense" or "total_expense".
+3. If the user is asking a question about their data (e.g. "how much does Ramesh owe me?"), use the provided CONTEXT (recent transactions) to calculate the answer.
+   - set type: "query"
+   - set summary: A natural, conversational answer to their question in the SAME language.
 
-EXAMPLE INPUT: "Ramesh ne mujhse 500 rupye liye, 2 hafte mein dega"
-EXAMPLE OUTPUT: {"type":"lent","person_name":"Ramesh","amount":500,"due_date":"2026-06-03","category":null,"confidence":0.95,"summary":"Ramesh ka ₹500 ka udhar save ho gaya, 2 hafte baad dega."}
+4. If the user's intent is unclear or missing critical data (e.g. "gave 500" but no name), set confidence below 0.5.
+   - set type: "error"
+   - set summary: A friendly clarifying question in the SAME language (e.g., "Who did you give the 500 rupees to?")
 
-EXAMPLE INPUT: "Aaj sabzi pe 120 rupaye lage"
-EXAMPLE OUTPUT: {"type":"expense","person_name":null,"amount":120,"due_date":null,"category":"food","confidence":0.9,"summary":"₹120 ka kharcha food mein save ho gaya."}`;
+EXAMPLE NEW ENTRY: "Ramesh ne mujhse 500 rupye liye"
+OUTPUT: {"type":"lent","person_name":"Ramesh","amount":500,"due_date":null,"category":null,"confidence":0.95,"summary":"Mene note kar liya hai. Ramesh ne aapse 500 rupye udhar liye hain."}
+
+EXAMPLE QUERY: "Mera kitna kharcha hua?" (Context shows 200 on food)
+OUTPUT: {"type":"query","summary":"Aapka total 200 rupye ka kharcha hua hai food pe."}`;
 
 export async function POST(request) {
   try {
-    const { transcript, language = 'hindi' } = await request.json();
+    const { transcript, language = 'hindi', context = [] } = await request.json();
 
     if (!transcript || transcript.trim().length === 0) {
       return NextResponse.json(
@@ -46,7 +49,11 @@ export async function POST(request) {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const userMessage = `Today's date is ${today}. Language: ${language}. Transcript: "${transcript}"`;
+    const contextStr = context.length > 0 ? JSON.stringify(context.slice(0, 30)) : 'No past transactions yet.';
+    const userMessage = `Today's date is ${today}. Language: ${language}.
+Recent Transactions Context: ${contextStr}
+
+User Transcript: "${transcript}"`;
 
     const response = await fetch(GROQ_URL, {
       method: 'POST',
@@ -55,7 +62,7 @@ export async function POST(request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userMessage },

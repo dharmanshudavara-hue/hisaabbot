@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import BottomNav from './components/BottomNav';
 import { MicIcon, CheckCircleIcon, LoaderIcon, VolumeIcon } from './components/Icons';
 import { useSpeechRecognition, speak, parseTranscript } from '../lib/speech';
-import { addTransaction, getSetting, setSetting } from '../lib/db';
+import { addTransaction, getSetting, setSetting, getAllTransactions } from '../lib/db';
 
 const STATUS_MESSAGES = {
   hindi: {
@@ -85,7 +85,10 @@ export default function HomePage() {
     setDisplayText(text);
 
     try {
-      const result = await parseTranscript(text, language);
+      const all = await getAllTransactions();
+      const recentContext = all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 30);
+      
+      const result = await parseTranscript(text, language, recentContext);
 
       if (result.success && result.data) {
         const data = result.data;

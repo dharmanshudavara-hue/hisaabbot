@@ -6,7 +6,8 @@ import BottomNav from '../components/BottomNav';
 import {
   ChartIcon, ArrowUpIcon, ArrowDownIcon, RupeeIcon,
   CalendarIcon, ChevronRightIcon, FoodIcon, TransportIcon,
-  MedicineIcon, HouseIcon, BriefcaseIcon, PackageIcon
+  MedicineIcon, HouseIcon, BriefcaseIcon, PackageIcon,
+  PlayIcon
 } from '../components/Icons';
 import { getMonthlySummary, getAllTransactions, getSetting } from '../../lib/db';
 
@@ -59,6 +60,17 @@ export default function ReportsPage() {
     setLoading(false);
   };
 
+  const playSummary = async () => {
+    if (!summary) return;
+    const text = language === 'hindi' ? `इस महीने, आपने कुल ${summary.totalExpenses} रुपये खर्च किए हैं। ${summary.totalLent} रुपये उधार दिए हैं, और ${summary.totalBorrowed} रुपये उधार लिए हैं।`
+               : language === 'gujarati' ? `આ મહિને, તમે કુલ ${summary.totalExpenses} રૂપિયા ખર્ચ કર્યા છે. ${summary.totalLent} રૂપિયા ઉધાર આપ્યા છે, અને ${summary.totalBorrowed} રૂપિયા ઉધાર લીધા છે.`
+               : `This month, you have spent a total of ${summary.totalExpenses} rupees. You lent ${summary.totalLent} rupees, and borrowed ${summary.totalBorrowed} rupees.`;
+    
+    // Import dynamically to avoid SSR issues
+    const { speak } = await import('../../lib/speech');
+    await speak(text, language);
+  };
+
   const prevMonth = () => {
     if (month === 1) { setMonth(12); setYear(y => y - 1); }
     else setMonth(m => m - 1);
@@ -94,13 +106,21 @@ export default function ReportsPage() {
             {language === 'hindi' ? 'मासिक सारांश' : language === 'gujarati' ? 'માસિક સારાંશ' : 'Monthly summary'}
           </p>
         </div>
-        <Link href="/expenses" className="btn btn-ghost" style={{
-          fontSize: '0.75rem', padding: '8px 14px', minHeight: 'auto', minWidth: 'auto',
-          border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-full)'
-        }} id="view-expenses-link">
-          {language === 'hindi' ? 'खर्चे' : language === 'gujarati' ? 'ખર્ચ' : 'Expenses'}
-          <ChevronRightIcon size={14} />
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost" onClick={playSummary} style={{
+            padding: '8px', minHeight: 'auto', minWidth: 'auto',
+            border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-full)'
+          }} title="Listen to Summary">
+            <PlayIcon size={18} style={{ color: 'var(--green-400)' }} />
+          </button>
+          <Link href="/expenses" className="btn btn-ghost" style={{
+            fontSize: '0.75rem', padding: '8px 14px', minHeight: 'auto', minWidth: 'auto',
+            border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-full)'
+          }} id="view-expenses-link">
+            {language === 'hindi' ? 'खर्चे' : language === 'gujarati' ? 'ખર્ચ' : 'Expenses'}
+            <ChevronRightIcon size={14} />
+          </Link>
+        </div>
       </div>
 
       <div className="page-content">
