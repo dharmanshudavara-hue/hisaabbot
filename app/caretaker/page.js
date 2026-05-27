@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { getAllTransactions } from '../../lib/db';
 import { ChevronRightIcon, DownloadIcon } from '../components/Icons';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function CaretakerPage() {
   const [transactions, setTransactions] = useState([]);
@@ -48,7 +48,7 @@ export default function CaretakerPage() {
       tableRows.push([date, type, personCat, amount, summary]);
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 25,
