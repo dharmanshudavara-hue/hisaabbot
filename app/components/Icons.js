@@ -291,3 +291,13 @@ export function InfoIcon({ size = 24, ...props }) {
     </svg>
   );
 }
+
+export function CloudIcon({ size = 24, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M17.5 19a5.5 5.5 0 0 0 0-11h-.5a7.5 7.5 0 0 0-14 0h-.5a4.5 4.5 0 0 0 0 9Z" />
+      <path d="M12 12v6" />
+      <path d="M15 15l-3-3-3 3" />
+    </svg>
+  );
+}
