@@ -1,36 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HisaabBot
 
-## Getting Started
+**A voice-first, AI-powered loan and expense tracker for people who cannot read or write.**
 
-First, run the development server:
+HisaabBot is designed to be the financial memory that non-literate individuals never had. It allows users to track their informal loans ("Udhar Khata") and daily expenses entirely by speaking in their native language (e.g., Hindi, Gujarati). No reading or typing is required.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Key Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- ** Voice-First Interface:** Users press a large microphone button and speak naturally (e.g., "Ramesh ko 500 rupaye diye").
+- ** AI Intent Extraction:** Uses LLMs to automatically parse names, amounts, and transaction types from unstructured speech.
+- ** Audio Confirmations:** The app speaks back confirmations so the user knows the transaction was recorded correctly.
+- ** Udhar Khata (Loan Tracker):** Track who borrowed money and who you owe.
+- ** Expense Tracking:** Log daily expenses and get auto-categorized summaries.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech Stack
 
-## Learn More
+- **Frontend:** Next.js (React), Progressive Web App (PWA)
+- **AI Processing:** Groq Llama 3.1 API (for intent extraction)
+- **Voice Capabilities:** Native browser Web Speech API (STT) and SpeechSynthesis API (TTS)
+- **Database:** Supabase (PostgreSQL)
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License
