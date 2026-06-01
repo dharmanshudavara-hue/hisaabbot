@@ -152,6 +152,11 @@ export default function LoansPage() {
                 </div>
                 <div className="loan-info">
                   <div className="loan-name">{loan.person_name || 'Unknown'}</div>
+                  {loan.raw_transcript && (
+                    <div style={{ fontSize: '0.813rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '2px', marginBottom: '4px' }}>
+                      "{loan.raw_transcript.length > 50 ? loan.raw_transcript.slice(0, 50) + '...' : loan.raw_transcript}"
+                    </div>
+                  )}
                   <div className="loan-date">
                     {formatDate(loan.created_at)}
                     {loan.due_date && ` • Due ${formatDate(loan.due_date)}`}
