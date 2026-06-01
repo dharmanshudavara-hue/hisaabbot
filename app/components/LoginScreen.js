@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getUsers, addUser, updateUserPin, updateUserRecoveryKey } from '../../lib/db';
+import { getUsers, addUser, updateUserPin, updateUserRecoveryKey, fetchUserFromCloud } from '../../lib/db';
 import {
   hashPin, verifyPin, validatePin, validateUsername,
   generateRecoveryKey, hashRecoveryKey, verifyRecoveryKey
@@ -141,6 +141,12 @@ export default function LoginScreen({ onLogin }) {
   const [recoveryNewPin, setRecoveryNewPin] = useState('');
   const [recoveryConfirmPin, setRecoveryConfirmPin] = useState('');
   const [recoveryError, setRecoveryError] = useState('');
+
+  // Cloud login state
+  const [cloudLoginMode, setCloudLoginMode] = useState(false);
+  const [cloudUserId, setCloudUserId] = useState('');
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudError, setCloudError] = useState('');
 
   // General
   const [error, setError] = useState('');
@@ -367,6 +373,44 @@ export default function LoginScreen({ onLogin }) {
     setRecoveryError('');
   };
 
+  // ─── Cloud Login Handler ──────────────────────────────────────────────
+  const handleCloudLogin = async () => {
+    const trimmed = cloudUserId.trim().toUpperCase();
+    if (!trimmed) {
+      setCloudError('Please enter your User ID (e.g. HB-001)');
+      return;
+    }
+    // Auto-format: if user typed "HB001" without dash, fix it
+    let formatted = trimmed;
+    if (/^HB\d{3,}$/.test(formatted)) {
+      formatted = 'HB-' + formatted.slice(2);
+    }
+
+    setCloudLoading(true);
+    setCloudError('');
+    try {
+      const user = await fetchUserFromCloud(formatted);
+      // User fetched and saved to local IndexedDB. Now select them for PIN entry.
+      setSelectedUser(user);
+      setCloudLoginMode(false);
+      setCloudUserId('');
+      // Refresh local users list
+      const dbUsers = await getUsers();
+      setUsers(dbUsers);
+      setSetupMode(false);
+    } catch (err) {
+      console.error('Cloud login error:', err);
+      setCloudError('User ID not found. Please check and try again.');
+    }
+    setCloudLoading(false);
+  };
+
+  const resetCloudLogin = () => {
+    setCloudLoginMode(false);
+    setCloudUserId('');
+    setCloudError('');
+  };
+
   // ─── Render ───────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -408,7 +452,7 @@ export default function LoginScreen({ onLogin }) {
               <div className="setup-step fade-in">
                 <h2 className="setup-title">Welcome!</h2>
                 <p className="setup-desc">
-                  Let's set up your account. All data stays offline on your device.
+                  Let's set up your account. Your data syncs securely to the cloud.
                 </p>
                 <div className="input-group">
                   <label className="input-label">Your Name</label>
@@ -424,7 +468,15 @@ export default function LoginScreen({ onLogin }) {
                 </div>
                 {error && <p className="pin-error-text">{error}</p>}
                 <button className="btn btn-primary login-btn" onClick={handleSetupNameNext}>
-                  Continue
+                  Create New Account
+                </button>
+                <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0 6px' }}>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1 }}>or</span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+                </div>
+                <button className="btn btn-secondary login-btn" style={{ marginTop: 6 }} onClick={() => { setSetupMode(false); setCloudLoginMode(true); }}>
+                  Already have an account? Log in
                 </button>
               </div>
             )}
@@ -571,6 +623,53 @@ export default function LoginScreen({ onLogin }) {
             </div>
           </div>
 
+        /* ─── Cloud Login: User ID Entry ──────────────────────────── */
+        ) : cloudLoginMode ? (
+          <div className="login-card fade-in">
+            <div className="setup-step fade-in">
+              <div className="recovery-icon-wrapper">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--blue-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z" />
+                  <path d="M21 14H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1z" />
+                  <circle cx="7" cy="7" r="1" fill="var(--blue-400)" />
+                  <circle cx="7" cy="19" r="1" fill="var(--blue-400)" />
+                </svg>
+              </div>
+              <h2 className="setup-title">Log in from Cloud</h2>
+              <p className="setup-desc">
+                Enter your User ID to log in to your existing account from this device.
+              </p>
+              <div className="input-group">
+                <label className="input-label">User ID</label>
+                <input
+                  type="text"
+                  value={cloudUserId}
+                  onChange={e => { setCloudUserId(e.target.value.toUpperCase()); setCloudError(''); }}
+                  placeholder="e.g. HB-001"
+                  className="input-field"
+                  style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.1em', fontFamily: 'monospace' }}
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && handleCloudLogin()}
+                />
+              </div>
+              {cloudError && <p className="pin-error-text">{cloudError}</p>}
+              <button
+                className="btn btn-primary login-btn"
+                onClick={handleCloudLogin}
+                disabled={cloudLoading}
+                style={{ marginTop: 8 }}
+              >
+                {cloudLoading ? 'Searching...' : 'Find My Account'}
+              </button>
+              <button className="btn-link" style={{ marginTop: 12 }} onClick={() => {
+                resetCloudLogin();
+                if (users.length === 0) setSetupMode(true);
+              }}>
+                ← Back
+              </button>
+            </div>
+          </div>
+
         /* ─── Login: User Selection ─────────────────────────────── */
         ) : (
           <div className="login-users-list fade-in">
@@ -594,6 +693,16 @@ export default function LoginScreen({ onLogin }) {
                 <LockIcon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               </button>
             ))}
+
+            {/* Cloud login button at the bottom of user list */}
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0 8px' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1 }}>or</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+            </div>
+            <button className="btn-link" style={{ fontSize: '0.875rem' }} onClick={() => setCloudLoginMode(true)}>
+              Log in with a different User ID
+            </button>
           </div>
         )}
       </div>
