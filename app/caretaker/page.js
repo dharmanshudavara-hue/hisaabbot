@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getAllTransactions } from '../../lib/db';
-import { ChevronRightIcon, DownloadIcon } from '../components/Icons';
+import { ChevronRightIcon, DownloadIcon, UserIcon } from '../components/Icons';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -11,9 +11,14 @@ export default function CaretakerPage() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     loadData();
+    const storedUser = sessionStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
   }, []);
 
   const loadData = async () => {
@@ -68,16 +73,23 @@ export default function CaretakerPage() {
       <div className="page-header" style={{ paddingBottom: 16 }}>
         <div>
           <h1 className="page-title">Caretaker Dashboard</h1>
-          <p style={{ fontSize: '0.813rem', color: 'var(--text-tertiary)', marginTop: 2 }}>
-            Complete data review and export
-          </p>
+          {currentUser && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+              <span style={{ fontSize: '0.813rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{currentUser.username}</span>
+              <span style={{ fontSize: '0.688rem', padding: '2px 6px', background: 'rgba(245,158,11,0.15)', color: 'var(--amber-400)', borderRadius: 12, fontFamily: 'monospace' }}>
+                {currentUser.userId}
+              </span>
+            </div>
+          )}
         </div>
-        <Link href="/settings" className="btn btn-ghost" style={{
-          fontSize: '0.75rem', padding: '8px 14px', minHeight: 'auto', minWidth: 'auto',
-          border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-full)'
-        }}>
-          Back
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => { sessionStorage.removeItem('currentUser'); window.location.href = '/'; }} className="btn btn-ghost" style={{
+            fontSize: '0.75rem', padding: '8px 14px', minHeight: 'auto', minWidth: 'auto',
+            border: '1px solid var(--red-400)', color: 'var(--red-400)', borderRadius: 'var(--radius-full)'
+          }}>
+            Logout
+          </button>
+        </div>
       </div>
 
       <div className="page-content" style={{ padding: '0 16px' }}>

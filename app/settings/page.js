@@ -6,24 +6,58 @@ import BottomNav from '../components/BottomNav';
 import {
   SettingsIcon, GlobeIcon, ShieldIcon, InfoIcon,
   DownloadIcon, XCircleIcon, ChevronRightIcon, CloudIcon,
-  UsersIcon, LockIcon
+  UsersIcon, LockIcon, ArrowRightIcon, UserIcon
 } from '../components/Icons';
-import { getSetting, setSetting, getAllTransactions, syncWithSupabase } from '../../lib/db';
+import { getSetting, setSetting, getAllTransactions, syncWithSupabase, addUser, getUsers, deleteUser, updateUserPin, updateUserRecoveryKey } from '../../lib/db';
+import { hashPin, generateRecoveryKey, hashRecoveryKey } from '../../lib/auth';
 
 export default function SettingsPage() {
   const [language, setLanguage] = useState('hindi');
   const [transactionCount, setTransactionCount] = useState(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showCaretakerPin, setShowCaretakerPin] = useState(false);
-  const [pinInput, setPinInput] = useState('');
+  
+  // Add Caretaker State
+  const [showAddCaretaker, setShowAddCaretaker] = useState(false);
+  const [caretakerUsername, setCaretakerUsername] = useState('');
+  const [caretakerPin, setCaretakerPin] = useState('');
+  const [caretakerRecoveryKey, setCaretakerRecoveryKey] = useState('');
+  
+  // Caretaker List State
+  const [caretakers, setCaretakers] = useState([]);
+  
+  // Change PIN State
+  const [showChangePin, setShowChangePin] = useState(false);
+  const [changePinStep, setChangePinStep] = useState(1); // 1 = new pin, 2 = confirm pin
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [newRecoveryKey, setNewRecoveryKey] = useState('');
+
   const [clearing, setClearing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [toast, setToast] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     getSetting('language').then(l => { if (l) setLanguage(l); }).catch(() => {});
     getAllTransactions().then(t => setTransactionCount(t.length)).catch(() => {});
+    
+    const storedUser = sessionStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+    
+    loadCaretakers();
   }, []);
+
+  const loadCaretakers = async () => {
+    try {
+      const users = await getUsers();
+      setCaretakers(users.filter(u => u.role === 'caretaker'));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleLanguageChange = async (lang) => {
     setLanguage(lang);
@@ -38,7 +72,6 @@ export default function SettingsPage() {
   const handleClearData = async () => {
     setClearing(true);
     try {
-      // Clear IndexedDB
       const dbs = await indexedDB.databases();
       for (const db of dbs) {
         if (db.name === 'hisaabbot') {
@@ -47,16 +80,13 @@ export default function SettingsPage() {
       }
       setTransactionCount(0);
       setShowClearConfirm(false);
-      showToast(
-        language === 'hindi' ? 'सारा डेटा मिटा दिया गया' :
-        language === 'gujarati' ? 'બધો ડેટા કાઢી નાખ્યો' :
-        'All data cleared'
-      );
+      sessionStorage.removeItem('currentUser');
+      window.location.href = '/';
     } catch (err) {
       console.error('Clear data error:', err);
       showToast('Error clearing data');
+      setClearing(false);
     }
-    setClearing(false);
   };
 
   const handleExportData = async () => {
@@ -103,13 +133,91 @@ export default function SettingsPage() {
     setSyncing(false);
   };
 
-  const handlePinSubmit = () => {
-    if (pinInput === '1234') {
-      window.location.href = '/caretaker';
-    } else {
-      showToast('Incorrect PIN');
-      setPinInput('');
+  const handleAddCaretaker = async () => {
+    if (!caretakerUsername || caretakerUsername.length < 3) {
+      showToast('Username must be at least 3 chars');
+      return;
     }
+    if (!caretakerPin || caretakerPin.length !== 4) {
+      showToast('PIN must be 4 digits');
+      return;
+    }
+    try {
+      const pinH = await hashPin(caretakerPin);
+      const recKey = generateRecoveryKey();
+      const recKeyHash = await hashRecoveryKey(recKey);
+      
+      await addUser(caretakerUsername, pinH, 'caretaker', recKeyHash);
+      setCaretakerRecoveryKey(recKey);
+      loadCaretakers();
+      // Show success state with recovery key
+    } catch (err) {
+      showToast(err.message);
+    }
+  };
+
+  const closeAddCaretaker = () => {
+    setShowAddCaretaker(false);
+    setCaretakerUsername('');
+    setCaretakerPin('');
+    setCaretakerRecoveryKey('');
+  };
+
+  const handleRemoveCaretaker = async (userId) => {
+    if (confirm('Are you sure you want to remove this caretaker?')) {
+      try {
+        await deleteUser(userId);
+        showToast('Caretaker removed');
+        loadCaretakers();
+      } catch (err) {
+        showToast('Error removing caretaker');
+      }
+    }
+  };
+
+  const handleChangePinNext = () => {
+    if (newPin.length !== 4) {
+      setPinError('PIN must be 4 digits');
+      return;
+    }
+    setPinError('');
+    setChangePinStep(2);
+  };
+
+  const handleChangePinSubmit = async () => {
+    if (newPin !== confirmPin) {
+      setPinError('PINs do not match');
+      return;
+    }
+    
+    try {
+      const pinH = await hashPin(newPin);
+      await updateUserPin(currentUser.userId, pinH);
+      
+      // Also generate a new recovery key for security
+      const recKey = generateRecoveryKey();
+      const recKeyHash = await hashRecoveryKey(recKey);
+      await updateUserRecoveryKey(currentUser.userId, recKeyHash);
+      
+      setNewRecoveryKey(recKey);
+      setChangePinStep(3); // Show recovery key
+    } catch (err) {
+      setPinError('Failed to update PIN');
+    }
+  };
+
+  const closeChangePin = () => {
+    setShowChangePin(false);
+    setChangePinStep(1);
+    setNewPin('');
+    setConfirmPin('');
+    setPinError('');
+    setNewRecoveryKey('');
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('currentUser');
+    window.location.href = '/';
   };
 
   const showToast = (message) => {
@@ -136,15 +244,46 @@ export default function SettingsPage() {
              'Manage app settings'}
           </p>
         </div>
-        <Link href="/" className="btn btn-ghost" style={{
+        <button onClick={handleLogout} className="btn btn-ghost" style={{
           fontSize: '0.75rem', padding: '8px 14px', minHeight: 'auto', minWidth: 'auto',
-          border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-full)'
+          border: '1px solid var(--red-400)', color: 'var(--red-400)', borderRadius: 'var(--radius-full)'
         }}>
-          {language === 'hindi' ? 'होम' : 'Home'}
-        </Link>
+          Logout
+        </button>
       </div>
 
       <div className="page-content">
+        
+        {/* Account Info Section */}
+        {currentUser && (
+          <div className="settings-group">
+            <div className="settings-group-title">Account</div>
+            
+            <div className="settings-item" style={{ cursor: 'default' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: currentUser.role === 'primary' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <UserIcon size={20} style={{ color: currentUser.role === 'primary' ? 'var(--green-400)' : 'var(--amber-400)' }} />
+              </div>
+              <div className="info">
+                <div className="title">{currentUser.username}</div>
+                <div className="desc" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ textTransform: 'capitalize' }}>{currentUser.role}</span>
+                  <span>•</span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{currentUser.userId}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="settings-item" onClick={() => setShowChangePin(true)} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <LockIcon size={22} style={{ color: 'var(--blue-400)' }} />
+              <div className="info">
+                <div className="title">Change PIN</div>
+                <div className="desc">Update your secure login PIN</div>
+              </div>
+              <ChevronRightIcon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            </div>
+          </div>
+        )}
+
         {/* Language Section */}
         <div className="settings-group">
           <div className="settings-group-title">
@@ -182,6 +321,51 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
+
+        {/* User Management Section (Only visible to Primary User) */}
+        {currentUser?.role === 'primary' && (
+          <div className="settings-group">
+            <div className="settings-group-title">Family & Caretakers</div>
+            
+            <Link href="/caretaker" className="settings-item" style={{ textDecoration: 'none' }}>
+              <UsersIcon size={22} style={{ color: 'var(--blue-400)' }} />
+              <div className="info">
+                <div className="title">View Caretaker Dashboard</div>
+                <div className="desc">Review all transactions and export PDFs</div>
+              </div>
+              <ChevronRightIcon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            </Link>
+
+            <div className="settings-item" onClick={() => setShowAddCaretaker(true)} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </div>
+              <div className="info">
+                <div className="title">Add Caretaker Account</div>
+                <div className="desc">Create a secure login for a family member</div>
+              </div>
+            </div>
+            
+            {caretakers.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                {caretakers.map(ct => (
+                  <div key={ct.userId} className="settings-item" style={{ cursor: 'default' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--amber-400)', fontWeight: 'bold' }}>
+                      {ct.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="info">
+                      <div className="title">{ct.username}</div>
+                      <div className="desc">{ct.userId}</div>
+                    </div>
+                    <button onClick={() => handleRemoveCaretaker(ct.userId)} className="btn btn-ghost" style={{ padding: '4px 8px', minHeight: 'auto', minWidth: 'auto', color: 'var(--red-400)' }}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Data Section */}
         <div className="settings-group">
@@ -227,28 +411,11 @@ export default function SettingsPage() {
             <ChevronRightIcon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           </div>
 
-          <div className="settings-item" onClick={() => setShowCaretakerPin(true)} id="caretaker-mode" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-            <UsersIcon size={22} style={{ color: 'var(--amber-400)' }} />
-            <div className="info">
-              <div className="title">
-                {language === 'hindi' ? 'केयरटेकर मोड' :
-                 language === 'gujarati' ? 'કેરટેકર મોડ' :
-                 'Caretaker Mode'}
-              </div>
-              <div className="desc">
-                {language === 'hindi' ? 'सभी लेनदेन की विस्तृत समीक्षा करें' :
-                 language === 'gujarati' ? 'બધા વ્યવહારની વિગતવાર સમીક્ષા કરો' :
-                 'Detailed review of all transactions'}
-              </div>
-            </div>
-            <LockIcon size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          </div>
-
           <div
             className="settings-item"
             onClick={() => setShowClearConfirm(true)}
             id="clear-data"
-            style={{ borderLeft: '3px solid transparent' }}
+            style={{ borderTop: '1px solid var(--border-subtle)' }}
           >
             <XCircleIcon size={22} style={{ color: 'var(--red-400)' }} />
             <div className="info">
@@ -277,7 +444,7 @@ export default function SettingsPage() {
             <InfoIcon size={22} />
             <div className="info">
               <div className="title">HisaabBot</div>
-              <div className="desc">v1.0.0 — Voice Finance Assistant</div>
+              <div className="desc">v1.1.0 — Secure Voice Finance</div>
             </div>
           </div>
 
@@ -342,55 +509,150 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Caretaker PIN Modal */}
-      {showCaretakerPin && (
-        <div className="overlay" onClick={() => setShowCaretakerPin(false)}>
+      {/* Change PIN Modal */}
+      {showChangePin && (
+        <div className="overlay" onClick={closeChangePin}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-handle" />
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <LockIcon size={48} style={{ color: 'var(--amber-400)', marginBottom: 12 }} />
+              <LockIcon size={48} style={{ color: 'var(--blue-400)', marginBottom: 12 }} />
               <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: 8 }}>
-                {language === 'hindi' ? 'केयरटेकर पिन दर्ज करें' :
-                 language === 'gujarati' ? 'કેરટેકર પિન દાખલ કરો' :
-                 'Enter Caretaker PIN'}
+                Change PIN
               </h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {language === 'hindi' ? 'डिफ़ॉल्ट पिन: 1234' :
-                 language === 'gujarati' ? 'ડિફૉલ્ટ પિન: 1234' :
-                 'Default PIN: 1234'}
-              </p>
-              <input
-                type="password"
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value)}
-                placeholder="****"
-                style={{
-                  marginTop: 16, width: '100%', padding: '12px', fontSize: '1.5rem',
-                  textAlign: 'center', letterSpacing: '0.5em',
-                  background: 'var(--bg-secondary)', border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)', color: 'var(--text-primary)'
-                }}
-                maxLength={4}
-                autoFocus
-              />
+              
+              {changePinStep === 1 && (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                    Enter a new 4-digit PIN for your account.
+                  </p>
+                  <input
+                    type="password"
+                    value={newPin}
+                    onChange={(e) => { setNewPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4)); setPinError(''); }}
+                    placeholder="****"
+                    style={{
+                      width: '100%', padding: '16px', fontSize: '2rem',
+                      textAlign: 'center', letterSpacing: '0.5em',
+                      background: 'var(--bg-secondary)', border: '1px solid var(--border-medium)',
+                      borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', marginBottom: 16
+                    }}
+                    autoFocus
+                  />
+                  {pinError && <p style={{ color: 'var(--red-400)', fontSize: '0.875rem', marginBottom: 16 }}>{pinError}</p>}
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button className="btn btn-secondary" style={{ flex: 1 }} onClick={closeChangePin}>Cancel</button>
+                    <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleChangePinNext}>Next</button>
+                  </div>
+                </>
+              )}
+              
+              {changePinStep === 2 && (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                    Confirm your new 4-digit PIN.
+                  </p>
+                  <input
+                    type="password"
+                    value={confirmPin}
+                    onChange={(e) => { setConfirmPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4)); setPinError(''); }}
+                    placeholder="****"
+                    style={{
+                      width: '100%', padding: '16px', fontSize: '2rem',
+                      textAlign: 'center', letterSpacing: '0.5em',
+                      background: 'var(--bg-secondary)', border: '1px solid var(--border-medium)',
+                      borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', marginBottom: 16
+                    }}
+                    autoFocus
+                  />
+                  {pinError && <p style={{ color: 'var(--red-400)', fontSize: '0.875rem', marginBottom: 16 }}>{pinError}</p>}
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setChangePinStep(1)}>Back</button>
+                    <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleChangePinSubmit}>Confirm</button>
+                  </div>
+                </>
+              )}
+              
+              {changePinStep === 3 && (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                    PIN updated! Since your PIN changed, here is your <strong>new Recovery Key</strong>. Please save it.
+                  </p>
+                  <div style={{ background: 'var(--bg-secondary)', border: '2px dashed var(--amber-400)', padding: 16, borderRadius: 'var(--radius-md)', marginBottom: 20 }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '0.15em', color: 'var(--amber-400)', fontFamily: 'monospace' }}>
+                      {newRecoveryKey}
+                    </span>
+                  </div>
+                  <button className="btn btn-primary" style={{ width: '100%' }} onClick={closeChangePin}>Done</button>
+                </>
+              )}
             </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button
-                className="btn btn-secondary"
-                style={{ flex: 1 }}
-                onClick={() => setShowCaretakerPin(false)}
-              >
-                {language === 'hindi' ? 'रद्द करें' : language === 'gujarati' ? 'રદ કરો' : 'Cancel'}
-              </button>
-              <button
-                className="btn"
-                style={{
-                  flex: 1, background: 'var(--green-500)', color: 'white',
-                }}
-                onClick={handlePinSubmit}
-              >
-                {language === 'hindi' ? 'प्रवेश करें' : language === 'gujarati' ? 'પ્રવેશ કરો' : 'Enter'}
-              </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Caretaker Modal */}
+      {showAddCaretaker && (
+        <div className="overlay" onClick={caretakerRecoveryKey ? undefined : closeAddCaretaker}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle" />
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <UsersIcon size={48} style={{ color: 'var(--amber-400)', marginBottom: 12 }} />
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: 8 }}>
+                Add Caretaker
+              </h3>
+              
+              {!caretakerRecoveryKey ? (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    Create an account for a family member. They will only have access to the Caretaker Dashboard.
+                  </p>
+                  
+                  <div style={{ marginTop: 20, textAlign: 'left' }}>
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 8, display: 'block' }}>Username</label>
+                    <input
+                      type="text"
+                      value={caretakerUsername}
+                      onChange={(e) => setCaretakerUsername(e.target.value)}
+                      placeholder="e.g. Son"
+                      style={{
+                        width: '100%', padding: '12px', fontSize: '1rem',
+                        background: 'var(--bg-secondary)', border: '1px solid var(--border-medium)',
+                        borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', marginBottom: 16
+                      }}
+                    />
+                    
+                    <label style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 8, display: 'block' }}>4-Digit PIN</label>
+                    <input
+                      type="password"
+                      value={caretakerPin}
+                      onChange={(e) => setCaretakerPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                      placeholder="****"
+                      style={{
+                        width: '100%', padding: '12px', fontSize: '1.5rem',
+                        textAlign: 'center', letterSpacing: '0.5em',
+                        background: 'var(--bg-secondary)', border: '1px solid var(--border-medium)',
+                        borderRadius: 'var(--radius-md)', color: 'var(--text-primary)'
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+                    <button className="btn btn-secondary" style={{ flex: 1 }} onClick={closeAddCaretaker}>Cancel</button>
+                    <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleAddCaretaker}>Create</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                    Caretaker created! Please give them this <strong>Recovery Key</strong> in case they forget their PIN.
+                  </p>
+                  <div style={{ background: 'var(--bg-secondary)', border: '2px dashed var(--amber-400)', padding: 16, borderRadius: 'var(--radius-md)', marginBottom: 20 }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '0.15em', color: 'var(--amber-400)', fontFamily: 'monospace' }}>
+                      {caretakerRecoveryKey}
+                    </span>
+                  </div>
+                  <button className="btn btn-primary" style={{ width: '100%' }} onClick={closeAddCaretaker}>Done</button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -405,3 +667,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

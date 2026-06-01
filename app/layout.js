@@ -18,6 +18,8 @@ export const viewport = {
   userScalable: false,
 };
 
+import AuthGuard from './components/AuthGuard';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="hi">
@@ -29,7 +31,9 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
       <body>
-        {children}
+        <AuthGuard>
+          {children}
+        </AuthGuard>
         <ServiceWorkerRegistration />
       </body>
     </html>
