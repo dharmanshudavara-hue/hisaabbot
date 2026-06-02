@@ -125,6 +125,7 @@ export default function LoginScreen({ onLogin }) {
   const [confirmPin, setConfirmPin] = useState('');
   const [recoveryKey, setRecoveryKey] = useState('');
   const [createdUserId, setCreatedUserId] = useState('');
+  const [createdUser, setCreatedUser] = useState(null);
   const [setupRole, setSetupRole] = useState('primary'); // Used when adding caretaker from settings redirects here
 
   // Login state
@@ -233,6 +234,7 @@ export default function LoginScreen({ onLogin }) {
       const pinH = await hashPin(newPin);
       const recoveryH = await hashRecoveryKey(key);
       const user = await addUser(newUsername.trim(), pinH, 'primary', recoveryH);
+      setCreatedUser(user);
       setCreatedUserId(user.userId);
       setSetupStep(4); // Show recovery key
     } catch (err) {
@@ -241,12 +243,18 @@ export default function LoginScreen({ onLogin }) {
   };
 
   const handleSetupComplete = () => {
-    sessionStorage.setItem('currentUser', JSON.stringify({
+    const user = createdUser || {
       userId: createdUserId,
       username: newUsername.trim(),
       role: 'primary'
+    };
+
+    sessionStorage.setItem('currentUser', JSON.stringify({
+      userId: user.userId,
+      username: user.username,
+      role: user.role
     }));
-    onLogin({ userId: createdUserId, username: newUsername.trim(), role: 'primary' });
+    onLogin({ userId: user.userId, username: user.username, role: user.role });
   };
 
   // ─── Login Handler ────────────────────────────────────────────────────
