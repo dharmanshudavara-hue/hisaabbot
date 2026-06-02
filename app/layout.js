@@ -1,4 +1,5 @@
 import './globals.css';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata = {
   title: 'HisaabBot — Voice Finance Assistant',
@@ -35,6 +36,7 @@ export default function RootLayout({ children }) {
           {children}
         </AuthGuard>
         <ServiceWorkerRegistration />
+        <Analytics />
       </body>
     </html>
   );
