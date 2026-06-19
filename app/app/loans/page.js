@@ -111,7 +111,7 @@ export default function LoansPage() {
         <div className="summary-grid">
           <div className="summary-card">
             <div className="icon-wrap green">
-              <ArrowUpIcon size={20} />
+              <ArrowDownIcon size={20} />
             </div>
             <div className="value green">₹{totals.lent.toLocaleString('en-IN')}</div>
             <div className="label">
@@ -120,7 +120,7 @@ export default function LoansPage() {
           </div>
           <div className="summary-card">
             <div className="icon-wrap red">
-              <ArrowDownIcon size={20} />
+              <ArrowUpIcon size={20} />
             </div>
             <div className="value red">₹{totals.borrowed.toLocaleString('en-IN')}</div>
             <div className="label">
