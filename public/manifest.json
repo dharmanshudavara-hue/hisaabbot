@@ -1,0 +1,21 @@
+{
+  "name": "HisaabBot — Voice Finance Assistant",
+  "short_name": "HisaabBot",
+  "description": "A voice-first AI-powered loan and expense tracker for people who prefer speaking over typing. Manage your finances entirely by voice in Hindi, Gujarati, or English.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "orientation": "portrait",
+  "categories": ["finance", "productivity"],
+  "lang": "hi",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
