@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import BottomNav from '../components/BottomNav';
-import { WalletIcon, ArrowUpIcon, ArrowDownIcon, CheckCircleIcon, ClockIcon, ChevronRightIcon } from '../components/Icons';
-import { getOpenLoans, getSettledLoans, getAllTransactions, settleLoan } from '../../lib/db';
+import { WalletIcon, ArrowUpIcon, ArrowDownIcon, CheckCircleIcon, ClockIcon, ChevronRightIcon, TrashIcon } from '../components/Icons';
+import { getOpenLoans, getSettledLoans, getAllTransactions, settleLoan, deleteTransaction } from '../../lib/db';
 import { speak } from '../../lib/speech';
 import { getSetting } from '../../lib/db';
 
@@ -53,6 +53,25 @@ export default function LoansPage() {
       console.error('Error settling loan:', err);
     }
     setSettlingId(null);
+  };
+
+  const handleDelete = async (id, personName, amount) => {
+    if (!window.confirm(language === 'hindi' ? 'क्या आप वाकई इसे हटाना चाहते हैं?' : language === 'gujarati' ? 'શું તમે ખરેખર આને કાઢી નાખવા માંગો છો?' : 'Are you sure you want to delete this?')) return;
+    try {
+      await deleteTransaction(id);
+      if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+      
+      const msg = language === 'hindi'
+        ? `${personName} ka ₹${amount} delete ho gaya`
+        : language === 'gujarati'
+        ? `${personName} na ₹${amount} delete thai gaya`
+        : `₹${amount} from ${personName} deleted`;
+      
+      await speak(msg, language);
+      await loadData();
+    } catch (err) {
+      console.error('Error deleting loan:', err);
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -152,6 +171,11 @@ export default function LoansPage() {
                 </div>
                 <div className="loan-info">
                   <div className="loan-name">{loan.person_name || 'Unknown'}</div>
+                  {loan.raw_transcript && (
+                    <div style={{ fontSize: '0.813rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '2px', marginBottom: '4px' }}>
+                      "{loan.raw_transcript.length > 50 ? loan.raw_transcript.slice(0, 50) + '...' : loan.raw_transcript}"
+                    </div>
+                  )}
                   <div className="loan-date">
                     {formatDate(loan.created_at)}
                     {loan.due_date && ` • Due ${formatDate(loan.due_date)}`}
@@ -197,6 +221,28 @@ export default function LoansPage() {
                       {settlingId === loan.id ? '...' : (language === 'hindi' ? 'चुकता' : 'Settle')}
                     </button>
                   )}
+                  <button
+                    className="btn btn-ghost"
+                    style={{
+                      fontSize: '0.688rem',
+                      padding: '6px',
+                      minHeight: 'auto',
+                      minWidth: 'auto',
+                      marginTop: 6,
+                      color: 'var(--red-400)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      borderRadius: 'var(--radius-full)',
+                      marginLeft: 6,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(loan.id, loan.person_name, loan.amount);
+                    }}
+                    title={language === 'hindi' ? 'हटाएं' : 'Delete'}
+                    aria-label="Delete"
+                  >
+                    <TrashIcon size={14} />
+                  </button>
                 </div>
               </div>
             ))

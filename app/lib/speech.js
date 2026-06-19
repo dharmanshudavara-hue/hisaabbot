@@ -17,6 +17,60 @@ const TTS_LANG_CODES = {
 };
 
 /**
+ * Unlock audio playback on iOS Safari.
+ * Must be called directly inside a user-gesture handler (e.g. pointerdown).
+ * Creates a silent AudioContext buffer + triggers an empty speechSynthesis utterance
+ * so that later async calls to speak() are allowed by the browser.
+ */
+let _audioUnlocked = false;
+export function unlockAudio() {
+  if (_audioUnlocked) return;
+  _audioUnlocked = true;
+
+  // 1. Unlock Web Audio API (needed for new Audio() to work later)
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      // Create a tiny silent buffer and play it
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      // Resume context if suspended (iOS pauses it by default)
+      if (ctx.state === 'suspended') ctx.resume();
+      // Close after a short delay to free resources
+      setTimeout(() => ctx.close().catch(() => {}), 500);
+    }
+  } catch (e) {
+    // Ignore — just means Web Audio isn't available
+  }
+
+  // 2. Unlock speechSynthesis by speaking an empty utterance
+  try {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance('');
+      utterance.volume = 0;
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+  } catch (e) {
+    // Ignore
+  }
+
+  // 3. Pre-create and immediately pause an Audio element to unlock media playback
+  try {
+    const silentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=');
+    silentAudio.volume = 0;
+    silentAudio.play().then(() => silentAudio.pause()).catch(() => {});
+  } catch (e) {
+    // Ignore
+  }
+}
+
+/**
  * Custom hook for Speech-to-Text using Web Speech API
  */
 export function useSpeechRecognition(language = 'hindi') {
@@ -117,50 +171,108 @@ export function useSpeechRecognition(language = 'hindi') {
 }
 
 /**
- * Text-to-Speech using SpeechSynthesis API
+ * Text-to-Speech using High-Quality Google TTS (Fallback to Web Speech API)
  */
 export function speak(text, language = 'hindi') {
+  return new Promise((resolve, reject) => {
+    try {
+      // Cancel any ongoing speech
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      const langCode = TTS_LANG_CODES[language] || 'hi-IN';
+      const baseLang = langCode.split('-')[0]; // e.g. 'hi', 'gu', 'en'
+      
+      // Use the unofficial Google Translate TTS endpoint for natural voice
+      const encodedText = encodeURIComponent(text);
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=${baseLang}&client=tw-ob`;
+      
+      const audio = new Audio(url);
+      
+      audio.onended = () => {
+        if (navigator.vibrate) navigator.vibrate(30);
+        resolve();
+      };
+      
+      audio.onerror = (e) => {
+        console.warn('Google TTS failed, falling back to Web Speech API', e);
+        fallbackSpeak(text, language).then(resolve).catch(reject);
+      };
+      
+      audio.play().catch(e => {
+        console.warn('Audio play failed, falling back', e);
+        fallbackSpeak(text, language).then(resolve).catch(reject);
+      });
+      
+    } catch (err) {
+      console.error('Error with audio, falling back', err);
+      fallbackSpeak(text, language).then(resolve).catch(reject);
+    }
+  });
+}
+
+function fallbackSpeak(text, language) {
   return new Promise((resolve, reject) => {
     if (!('speechSynthesis' in window)) {
       reject(new Error('Speech synthesis not supported'));
       return;
     }
 
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = TTS_LANG_CODES[language] || 'hi-IN';
-    utterance.rate = 0.9;
+    utterance.rate = 0.9; // 0.9 sounds more natural
     utterance.pitch = 1;
     utterance.volume = 1;
 
-    // Try to find a voice for the language
-    const voices = window.speechSynthesis.getVoices();
-    const langCode = TTS_LANG_CODES[language] || 'hi-IN';
-    const voice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]));
-    if (voice) utterance.voice = voice;
-
-    utterance.onend = () => {
-      // Haptic feedback on speech end
-      if (navigator.vibrate) navigator.vibrate(30);
-      resolve();
+    const setVoiceAndSpeak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const langCode = TTS_LANG_CODES[language] || 'hi-IN';
+      const baseLang = langCode.split('-')[0];
+      
+      const langVoices = voices.filter(v => v.lang.startsWith(baseLang));
+      
+      if (langVoices.length > 0) {
+        // Prioritize natural sounding voices
+        const bestVoice = langVoices.find(v => 
+          v.name.includes('Google') || 
+          v.name.includes('Natural') || 
+          v.name.includes('Premium') ||
+          v.name.includes('Online')
+        ) || langVoices.find(v => v.localService === false) || langVoices[0];
+        
+        utterance.voice = bestVoice;
+      }
+      
+      utterance.onend = () => {
+        if (navigator.vibrate) navigator.vibrate(30);
+        resolve();
+      };
+      utterance.onerror = (e) => reject(e);
+      
+      window.speechSynthesis.speak(utterance);
     };
-    utterance.onerror = (e) => reject(e);
 
-    window.speechSynthesis.speak(utterance);
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        setVoiceAndSpeak();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    } else {
+      setVoiceAndSpeak();
+    }
   });
 }
 
 /**
  * Parse voice transcript using Groq AI
  */
-export async function parseTranscript(transcript, language = 'hindi') {
+export async function parseTranscript(transcript, language = 'hindi', context = []) {
   try {
     const response = await fetch('/api/parse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transcript, language }),
+      body: JSON.stringify({ transcript, language, context }),
     });
 
     if (!response.ok) {

@@ -1,29 +1,29 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import BottomNav from './components/BottomNav';
 import { MicIcon, CheckCircleIcon, LoaderIcon, VolumeIcon } from './components/Icons';
-import { useSpeechRecognition, speak, parseTranscript } from '../lib/speech';
-import { addTransaction, getSetting, setSetting } from '../lib/db';
+import { useSpeechRecognition, speak, parseTranscript, unlockAudio } from '../lib/speech';
+import { addTransaction, getSetting, setSetting, getAllTransactions } from '../lib/db';
 
 const STATUS_MESSAGES = {
   hindi: {
-    idle: 'बोलने के लिए दबाएं',
-    listening: 'सुन रहा हूं...',
+    idle: 'दबाकर रखें बोलने के लिए',
+    listening: 'सुन रहा हूं... छोड़ें जब बोल लें',
     processing: 'समझ रहा हूं...',
     success: 'सेव हो गया!',
     error: 'फिर से बोलें',
   },
   gujarati: {
-    idle: 'બોલવા માટે દબાવો',
-    listening: 'સાંભળી રહ્યો છું...',
+    idle: 'બોલવા માટે દબાવી રાખો',
+    listening: 'સાંભળી રહ્યો છું... છોડો જ્યારે બોલી લો',
     processing: 'સમજી રહ્યો છું...',
     success: 'સેવ થઈ ગયું!',
     error: 'ફરી બોલો',
   },
   english: {
-    idle: 'Tap to speak',
-    listening: 'Listening...',
+    idle: 'Hold to speak',
+    listening: 'Listening... release when done',
     processing: 'Understanding...',
     success: 'Saved!',
     error: 'Try again',
@@ -85,7 +85,10 @@ export default function HomePage() {
     setDisplayText(text);
 
     try {
-      const result = await parseTranscript(text, language);
+      const all = await getAllTransactions();
+      const recentContext = all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 30);
+      
+      const result = await parseTranscript(text, language, recentContext);
 
       if (result.success && result.data) {
         const data = result.data;
@@ -98,6 +101,24 @@ export default function HomePage() {
             setDisplayText(data.summary);
             await speak(data.summary, language);
           }
+          setTimeout(() => {
+            setStatus('idle');
+            setDisplayText('');
+            setParsedData(null);
+          }, 4000);
+          return;
+        }
+
+        // Handle AI clarification questions or errors
+        if (data.type === 'error') {
+          setStatus('error');
+          const errorMsg = data.summary || (
+            language === 'hindi' ? 'मुझे समझ नहीं आया, कृपया फिर से बोलें' :
+            language === 'gujarati' ? 'મને સમજાયું નહીં, કૃપા કરીને ફરી બોલો' :
+            'I could not understand, please try again'
+          );
+          setDisplayText(errorMsg);
+          await speak(errorMsg, language);
           setTimeout(() => {
             setStatus('idle');
             setDisplayText('');
@@ -158,15 +179,46 @@ export default function HomePage() {
     }
   };
 
-  const handleMicPress = useCallback(() => {
+  const micRef = useRef(null);
+  const isHoldingRef = useRef(false);
+
+  const handleMicDown = useCallback((e) => {
+    // Prevent default to avoid text selection and context menu on long-press
+    e.preventDefault();
+    if (status === 'processing') return;
+    // Unlock iOS audio on user gesture so TTS confirmation works later
+    unlockAudio();
+    isHoldingRef.current = true;
+    setParsedData(null);
+    setDisplayText('');
+    startListening();
+  }, [startListening, status]);
+
+  const handleMicUp = useCallback((e) => {
+    e.preventDefault();
+    if (!isHoldingRef.current) return;
+    isHoldingRef.current = false;
     if (isListening) {
       stopListening();
-    } else {
-      setParsedData(null);
-      setDisplayText('');
-      startListening();
     }
-  }, [isListening, startListening, stopListening]);
+  }, [isListening, stopListening]);
+
+  // Prevent context menu on long-press (mobile)
+  useEffect(() => {
+    const el = micRef.current;
+    if (!el) return;
+    const prevent = (e) => e.preventDefault();
+    el.addEventListener('contextmenu', prevent);
+    return () => el.removeEventListener('contextmenu', prevent);
+  }, []);
+
+  // Safety: if pointer leaves the button while held, stop listening
+  const handleMicLeave = useCallback(() => {
+    if (isHoldingRef.current) {
+      isHoldingRef.current = false;
+      if (isListening) stopListening();
+    }
+  }, [isListening, stopListening]);
 
   const handleLanguageChange = async (lang) => {
     setLanguage(lang);
@@ -266,10 +318,15 @@ export default function HomePage() {
 
         {/* Mic Button */}
         <button
+          ref={micRef}
           className={getMicButtonClass()}
-          onClick={handleMicPress}
+          onPointerDown={handleMicDown}
+          onPointerUp={handleMicUp}
+          onPointerLeave={handleMicLeave}
+          onPointerCancel={handleMicUp}
           id="mic-button"
-          aria-label={isListening ? 'Stop recording' : 'Start recording'}
+          aria-label={isListening ? 'Recording... release to stop' : 'Hold to start recording'}
+          style={{ touchAction: 'none', userSelect: 'none' }}
         >
           <div className="mic-ring" />
           <div className="mic-ring" />
