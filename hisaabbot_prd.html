@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HisaabBot — Product Requirements Document</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f6f2;
+  --bg2: #efece4;
+  --bg3: #e5e0d2;
+  --ink: #1a1916;
+  --ink2: #48463f;
+  --ink3: #8a8779;
+  --line: rgba(26,25,22,0.1);
+  --green: #1a7a4a;
+  --green-bg: #edf7f2;
+  --green-border: #b0dfc8;
+  --amber: #7a5c00;
+  --amber-bg: #fdf8ec;
+  --amber-border: #e8d49a;
+  --red: #8a2020;
+  --red-bg: #fdf0f0;
+  --red-border: #e8b0b0;
+  --blue: #1a4a8a;
+  --blue-bg: #eff4fd;
+  --blue-border: #b0c8e8;
+  --r: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+/* ── PAGE SHELL ── */
+.cover {
+  background: var(--ink);
+  color: var(--bg);
+  min-height: 260px;
+  padding: 64px 80px 56px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 40px;
+}
+.cover-left .doc-type {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  opacity: 0.45;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+.cover-left h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.0;
+  letter-spacing: -1.5px;
+  margin-bottom: 10px;
+}
+.cover-left h1 em {
+  font-style: italic;
+  opacity: 0.55;
+}
+.cover-left .tagline {
+  font-size: 15px;
+  font-weight: 300;
+  opacity: 0.6;
+  max-width: 480px;
+  line-height: 1.6;
+}
+.cover-right {
+  text-align: right;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  opacity: 0.45;
+  line-height: 2;
+}
+.cover-right .ver {
+  font-size: 14px;
+  opacity: 0.7;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.meta-bar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 80px;
+  display: flex;
+  gap: 48px;
+}
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.meta-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+.meta-val {
+  font-weight: 500;
+  font-size: 13px;
+}
+.status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.status-draft { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+
+/* ── MAIN LAYOUT ── */
+.wrap {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 320px);
+}
+
+/* ── SIDEBAR TOC ── */
+.toc {
+  background: var(--bg2);
+  border-right: 1px solid var(--line);
+  padding: 40px 28px;
+  position: sticky;
+  top: 0;
+  height: fit-content;
+}
+.toc-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 20px;
+}
+.toc-list { list-style: none; }
+.toc-list li { margin-bottom: 2px; }
+.toc-list a {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink2);
+  text-decoration: none;
+  padding: 5px 8px;
+  border-radius: 5px;
+  transition: background 0.15s;
+  line-height: 1.4;
+}
+.toc-list a:hover { background: var(--bg3); }
+.toc-list a.h2 { font-weight: 500; }
+.toc-list a.h3 { padding-left: 20px; color: var(--ink3); font-size: 12px; }
+.toc-section-break { height: 16px; }
+
+/* ── CONTENT ── */
+.content {
+  padding: 56px 72px 80px;
+  max-width: 860px;
+}
+
+/* ── HEADINGS ── */
+.prd-h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 56px;
+}
+.prd-h1:first-child { margin-top: 0; }
+.sec-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--ink3);
+  font-weight: 400;
+  flex-shrink: 0;
+}
+.prd-h2 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 32px;
+  margin-bottom: 12px;
+  color: var(--ink);
+}
+.prd-h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 20px;
+  margin-bottom: 8px;
+  color: var(--ink2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+p { margin-bottom: 14px; font-weight: 300; }
+p:last-child { margin-bottom: 0; }
+
+/* ── CALLOUT BOXES ── */
+.callout {
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin: 20px 0;
+  font-size: 14px;
+  line-height: 1.65;
+  font-weight: 300;
+}
+.callout strong { font-weight: 600; }
+.callout.green  { background: var(--green-bg);  border-left: 3px solid var(--green);  color: #0f3d28; }
+.callout.amber  { background: var(--amber-bg);  border-left: 3px solid var(--amber);  color: #4a3a00; }
+.callout.red    { background: var(--red-bg);    border-left: 3px solid var(--red);    color: #4a1010; }
+.callout.blue   { background: var(--blue-bg);   border-left: 3px solid var(--blue);   color: #0f2a54; }
+.callout.mono { font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+
+/* ── TABLES ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin: 20px 0;
+}
+th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  padding: 0 12px 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: 'IBM Plex Mono', monospace;
+}
+td {
+  padding: 11px 12px 11px 0;
+  border-bottom: 1px solid rgba(26,25,22,0.06);
+  vertical-align: top;
+  font-weight: 300;
+  line-height: 1.55;
+}
+tr:last-child td { border-bottom: none; }
+td strong { font-weight: 500; }
+td code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  background: var(--bg2);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ── TAGS ── */
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 1px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.tag.must { background: #fdf0f0; color: #8a2020; border: 1px solid #e8b0b0; }
+.tag.should { background: #eff4fd; color: #1a4a8a; border: 1px solid #b0c8e8; }
+.tag.could { background: var(--bg2); color: var(--ink3); border: 1px solid var(--bg3); }
+.tag.free { background: #edf7f2; color: var(--green); border: 1px solid var(--green-border); }
+.tag.p0 { background: #fdf0f0; color: #8a2020; border: 1px solid #e8b0b0; }
+.tag.p1 { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.tag.p2 { background: var(--bg2); color: var(--ink3); border: 1px solid var(--bg3); }
+
+/* ── REQ CARDS ── */
+.req-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.req {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.req-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink3);
+  padding-top: 1px;
+}
+.req-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.req-desc { font-size: 13px; color: var(--ink2); font-weight: 300; line-height: 1.55; }
+.req-tags { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* ── USER STORY ── */
+.story {
+  background: var(--bg2);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin: 10px 0;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.65;
+  border: 1px solid var(--bg3);
+}
+.story em { font-style: italic; color: var(--ink2); }
+.story strong { font-weight: 600; }
+
+/* ── PERSONA ── */
+.persona-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+.persona-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.persona-header {
+  background: var(--ink);
+  color: var(--bg);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.persona-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.persona-name { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+.persona-role { font-size: 12px; opacity: 0.55; }
+.persona-body { padding: 16px 20px; }
+.persona-row { margin-bottom: 12px; }
+.persona-row:last-child { margin-bottom: 0; }
+.persona-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin-bottom: 3px;
+}
+.persona-row p { font-size: 13px; font-weight: 300; color: var(--ink2); line-height: 1.5; margin: 0; }
+
+/* ── METRICS ── */
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+.metric-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 18px;
+}
+.metric-card .num {
+  font-family: 'Fraunces', serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 6px;
+  color: var(--green);
+}
+.metric-card .label { font-size: 12px; font-weight: 500; margin-bottom: 4px; }
+.metric-card .desc { font-size: 12px; color: var(--ink3); font-weight: 300; line-height: 1.45; }
+
+/* ── ARCH DIAGRAM ── */
+.arch-box {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 28px;
+  margin: 16px 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--ink2);
+}
+.arch-box .layer {
+  padding: 8px 14px;
+  border-radius: 5px;
+  margin: 4px 0;
+  font-size: 12px;
+}
+.arch-box .layer.client { background: #edf7f2; color: #0f3d28; }
+.arch-box .layer.api    { background: #eff4fd; color: #0f2a54; }
+.arch-box .layer.ai     { background: #fdf8ec; color: #4a3a00; }
+.arch-box .layer.data   { background: #fdf0f0; color: #4a1010; }
+.arch-arrow { text-align: center; color: var(--ink3); font-size: 16px; line-height: 1.4; }
+
+/* ── RISK TABLE ── */
+.risk-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.risk-low    { background: var(--green-bg);  color: var(--green);  border: 1px solid var(--green-border); }
+.risk-medium { background: var(--amber-bg);  color: var(--amber);  border: 1px solid var(--amber-border); }
+.risk-high   { background: var(--red-bg);    color: var(--red);    border: 1px solid var(--red-border); }
+
+/* ── FOOTER ── */
+.doc-footer {
+  background: var(--bg2);
+  border-top: 1px solid var(--line);
+  padding: 24px 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--ink3);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+hr.divider { border: none; border-top: 1px solid var(--line); margin: 32px 0; }
+
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  background: var(--bg2);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--ink);
+}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-left">
+    <div class="doc-type">Product Requirements Document</div>
+    <h1>HisaabBot<br><em>Voice Finance Assistant</em></h1>
+    <div class="tagline">A voice-first, AI-powered loan and expense tracker for people who cannot read or write. Built entirely on free-tier tools.</div>
+  </div>
+  <div class="cover-right">
+    <div class="ver">v1.0</div>
+    <div>Product: HisaabBot</div>
+    <div>Platform: PWA (Web)</div>
+    <div>Build cost: ₹ 0</div>
+    <div>Author: Dharmanshu</div>
+    <div>For: Antigravity</div>
+  </div>
+</div>
+
+<div class="meta-bar">
+  <div class="meta-item"><span class="meta-label">Status</span> <span class="status-pill status-draft">Draft v1.0</span></div>
+  <div class="meta-item"><span class="meta-label">Owner</span> <span class="meta-val">Dharmanshu</span></div>
+  <div class="meta-item"><span class="meta-label">Target Launch</span> <span class="meta-val">10 Weeks</span></div>
+  <div class="meta-item"><span class="meta-label">Platform</span> <span class="meta-val">Progressive Web App</span></div>
+  <div class="meta-item"><span class="meta-label">Languages</span> <span class="meta-val">Hindi · Gujarati · English</span></div>
+</div>
+
+<!-- BODY -->
+<div class="wrap">
+
+  <!-- SIDEBAR TOC -->
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <ul class="toc-list">
+      <li><a class="h2" href="#s1">1. Overview</a></li>
+      <li><a class="h3" href="#s1-1">Problem statement</a></li>
+      <li><a class="h3" href="#s1-2">Product vision</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s2">2. Users & Personas</a></li>
+      <li><a class="h3" href="#s2-1">Primary user</a></li>
+      <li><a class="h3" href="#s2-2">Secondary user</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s3">3. Goals & Metrics</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s4">4. Features</a></li>
+      <li><a class="h3" href="#s4-1">Voice input engine</a></li>
+      <li><a class="h3" href="#s4-2">Loan tracker</a></li>
+      <li><a class="h3" href="#s4-3">Expense tracking</a></li>
+      <li><a class="h3" href="#s4-4">Reminders</a></li>
+      <li><a class="h3" href="#s4-5">Reports</a></li>
+      <li><a class="h3" href="#s4-6">Accessibility</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s5">5. User Stories</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s6">6. Functional Reqs</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s7">7. Non-Functional Reqs</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s8">8. Tech Architecture</a></li>
+      <li><a class="h3" href="#s8-1">Free stack map</a></li>
+      <li><a class="h3" href="#s8-2">Data models</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s9">9. Out of Scope</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s10">10. Risks</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s11">11. Timeline</a></li>
+      <li class="toc-section-break"></li>
+      <li><a class="h2" href="#s12">12. Open Questions</a></li>
+    </ul>
+  </nav>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- ══ 1. OVERVIEW ══ -->
+    <h2 class="prd-h1" id="s1"><span class="sec-num">01</span> Overview</h2>
+
+    <h3 class="prd-h2" id="s1-1">Problem statement</h3>
+    <p>A large segment of India's working population — small traders, daily-wage earners, farmers, and household workers — manages significant financial transactions entirely from memory. They lend and borrow money, track daily expenses, and operate informal credit networks, all verbally with no written record.</p>
+    <p>This creates three hard problems: <strong>memory failure</strong> (forgotten loans lead to disputes), <strong>no proof</strong> (word-of-mouth transactions leave no evidence), and <strong>no awareness</strong> (no visibility into total debt owed or owed to them). Existing apps — KhataBook, OkCredit, even WhatsApp — all require literacy, a barrier that excludes this entire segment.</p>
+
+    <div class="callout blue">
+      <strong>The specific user:</strong> An adult male, primary earner in a household, who conducts 10–30 small-money transactions per week — borrowing, lending, or daily spend — and cannot read or write in any language.
+    </div>
+
+    <h3 class="prd-h2" id="s1-2">Product vision</h3>
+    <p><strong>HisaabBot</strong> is a voice-first progressive web app that lets any person manage their finances entirely by speaking in their own language. No typing. No reading. No forms. The user speaks a transaction — "Ramesh ne 500 rupya liya" — and the app understands, stores, and confirms it back in their voice.</p>
+
+    <div class="callout green">
+      <strong>One-line product statement:</strong> HisaabBot is the financial memory that non-literate Indians never had — a voice assistant that remembers every rupee, reminds you of every due date, and requires zero reading ability to use.
+    </div>
+
+    <div class="callout amber">
+      <strong>Build constraint:</strong> The entire product must be built and operated at ₹0 cost using free-tier tools only. This is a hard constraint for v1.0, not a preference.
+    </div>
+
+    <hr class="divider">
+
+    <!-- ══ 2. PERSONAS ══ -->
+    <h2 class="prd-h1" id="s2"><span class="sec-num">02</span> Users & Personas</h2>
+
+    <div class="persona-grid">
+      <div class="persona-card">
+        <div class="persona-header">
+          <div class="persona-avatar">👨</div>
+          <div>
+            <div class="persona-name">Ramjibhai</div>
+            <div class="persona-role">Primary User · Non-literate adult</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="persona-row">
+            <div class="persona-label">Profile</div>
+            <p>55 years old, small vegetable vendor in Ahmedabad. Earns ₹300–600/day, conducts 5–15 informal money transactions per week.</p>
+          </div>
+          <div class="persona-row">
+            <div class="persona-label">Tech access</div>
+            <p>Has a basic Android phone (₹5,000–8,000), uses WhatsApp for voice messages, comfortable speaking but never types.</p>
+          </div>
+          <div class="persona-row">
+            <div class="persona-label">Goals</div>
+            <p>Know who owes him money. Remember when to collect. Avoid disputes. Not feel embarrassed about being unable to write.</p>
+          </div>
+          <div class="persona-row">
+            <div class="persona-label">Frustrations</div>
+            <p>Forgets loans after 2–3 weeks. Has no proof when disputes arise. Relies on his son to track things, which limits autonomy.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <div class="persona-header" style="background: #2a3a2a;">
+          <div class="persona-avatar">👦</div>
+          <div>
+            <div class="persona-name">Dharmanshu</div>
+            <div class="persona-role">Secondary User · Literate caretaker</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="persona-row">
+            <div class="persona-label">Profile</div>
+            <p>College student, son of the primary user. Occasionally helps father with finances. Has smartphone, full literacy.</p>
+          </div>
+          <div class="persona-row">
+            <div class="persona-label">Tech access</div>
+            <p>Uses Android + laptop, comfortable with apps, sets up the app for father, occasionally reviews family finances.</p>
+          </div>
+          <div class="persona-row">
+            <div class="persona-label">Goals</div>
+            <p>Set up the app once and have it run itself. Get alerts when large loans are due. Export records for important disputes.</p>
+          </div>
+          <div class="persona-row">
+            <div class="persona-label">Frustrations</div>
+            <p>Can't always be available to help. Doesn't want a complicated system his father will stop using after a week.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ══ 3. GOALS ══ -->
+    <h2 class="prd-h1" id="s3"><span class="sec-num">03</span> Goals & Success Metrics</h2>
+
+    <h3 class="prd-h2">Business goals</h3>
+    <table>
+      <thead><tr><th>Goal</th><th>Description</th><th>Timeframe</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Prove the concept</strong></td><td>Show that voice-based financial tracking works for non-literate users in Gujarati/Hindi</td><td>Week 10</td></tr>
+        <tr><td><strong>Zero build cost</strong></td><td>Entire v1.0 built and running without spending any money</td><td>Throughout</td></tr>
+        <tr><td><strong>Real-world validation</strong></td><td>5–10 pilot users using the app weekly for at least 4 weeks post-launch</td><td>Week 14</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="prd-h2">Success metrics (v1.0 pilot)</h3>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="num">≥80%</div>
+        <div class="label">Voice intent accuracy</div>
+        <div class="desc">Correct extraction of name, amount, and transaction type from voice input in Gujarati/Hindi</div>
+      </div>
+      <div class="metric-card">
+        <div class="num">5+</div>
+        <div class="label">Active pilot users</div>
+        <div class="desc">Non-literate users who independently use the app at least 3×/week without caretaker assistance</div>
+      </div>
+      <div class="metric-card">
+        <div class="num">&lt;5s</div>
+        <div class="label">Voice-to-confirmation</div>
+        <div class="desc">Time from speaking a transaction to receiving audio confirmation, on a 4G/WiFi connection</div>
+      </div>
+      <div class="metric-card">
+        <div class="num">0</div>
+        <div class="label">Build cost (₹)</div>
+        <div class="desc">Total money spent on tools, APIs, and infrastructure during v1.0 development and pilot</div>
+      </div>
+      <div class="metric-card">
+        <div class="num">≥90%</div>
+        <div class="label">Offline reliability</div>
+        <div class="desc">Loan recording and retrieval works correctly when device has no internet connection</div>
+      </div>
+      <div class="metric-card">
+        <div class="num">≥4/5</div>
+        <div class="label">Usability rating</div>
+        <div class="desc">Average score from pilot users when asked "does this app make your life easier?"</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ══ 4. FEATURES ══ -->
+    <h2 class="prd-h1" id="s4"><span class="sec-num">04</span> Features</h2>
+
+    <div class="callout mono">Priority key: <span class="tag must">MUST</span> = required for launch &nbsp; <span class="tag should">SHOULD</span> = strongly desired &nbsp; <span class="tag could">COULD</span> = nice to have</div>
+
+    <h3 class="prd-h2" id="s4-1">F1 — Voice Input Engine</h3>
+    <p>The foundational feature. Everything else depends on this working reliably in Hindi and Gujarati. User holds a button, speaks naturally, and the app extracts structured data from natural speech.</p>
+
+    <div class="req-list">
+      <div class="req">
+        <div class="req-id">F1.1</div>
+        <div>
+          <div class="req-title">Speech capture via Web Speech API</div>
+          <div class="req-desc">App must capture voice input using the browser's native Web Speech API. User holds a large microphone button to record. Recording stops when they release or after 10 seconds of silence.</div>
+          <div class="req-tags"><span class="tag must">MUST</span><span class="tag free">Web Speech API</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F1.2</div>
+        <div>
+          <div class="req-title">AI intent extraction (Groq free tier)</div>
+          <div class="req-desc">Transcribed text is sent to Groq's free Llama 3.1 API. A structured prompt extracts: transaction_type (lent/borrowed/spent), person_name, amount (INR), due_date (if mentioned), category (for expenses). Returns JSON.</div>
+          <div class="req-tags"><span class="tag must">MUST</span><span class="tag free">Groq API · Free tier</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F1.3</div>
+        <div>
+          <div class="req-title">Voice confirmation playback</div>
+          <div class="req-desc">After saving a transaction, the app speaks a confirmation in the user's language using the SpeechSynthesis API. Example: "Ramesh ka 500 rupya ka udhar save ho gaya, 2 hafte baad dega."</div>
+          <div class="req-tags"><span class="tag must">MUST</span><span class="tag free">SpeechSynthesis API</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F1.4</div>
+        <div>
+          <div class="req-title">Ambiguity correction flow</div>
+          <div class="req-desc">If the AI cannot extract a required field (e.g. amount missing), the app asks a targeted follow-up question by voice: "Kitne rupaye?" User responds to fill the gap. Max 2 clarification rounds.</div>
+          <div class="req-tags"><span class="tag should">SHOULD</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F1.5</div>
+        <div>
+          <div class="req-title">Language selection</div>
+          <div class="req-desc">User can set preferred language (Hindi / Gujarati / English) in settings. All STT, AI prompts, TTS confirmations, and UI labels adapt to the chosen language.</div>
+          <div class="req-tags"><span class="tag must">MUST</span></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="prd-h2" id="s4-2">F2 — Loan Tracker (Udhar Khata)</h3>
+    <div class="req-list">
+      <div class="req">
+        <div class="req-id">F2.1</div>
+        <div>
+          <div class="req-title">Record loan by voice</div>
+          <div class="req-desc">User can record who lent or borrowed money, how much, and an optional due date — entirely by speaking. System distinguishes "I lent" vs "I borrowed" correctly.</div>
+          <div class="req-tags"><span class="tag must">MUST</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F2.2</div>
+        <div>
+          <div class="req-title">View outstanding loans by voice</div>
+          <div class="req-desc">User can ask "Kaun mujhe paisa dega?" or "Maine kisko paisa diya?" The app reads the answer aloud: "Ramesh ₹500, Suresh ₹1200 — kul ₹1700 tumhara milna hai."</div>
+          <div class="req-tags"><span class="tag must">MUST</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F2.3</div>
+        <div>
+          <div class="req-title">Mark loan as repaid</div>
+          <div class="req-desc">User can say "Ramesh ne paisa de diya" and the loan is marked settled with a timestamp. Repaid loans move to a history view.</div>
+          <div class="req-tags"><span class="tag must">MUST</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F2.4</div>
+        <div>
+          <div class="req-title">Simple interest calculator</div>
+          <div class="req-desc">Optional field: monthly interest rate (%). App automatically calculates interest accumulated since loan date and includes it in the outstanding amount.</div>
+          <div class="req-tags"><span class="tag should">SHOULD</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F2.5</div>
+        <div>
+          <div class="req-title">PDF proof export</div>
+          <div class="req-desc">A "Generate Proof" button creates a simple PDF (via jsPDF, open source) listing the loan: names, amount, date, and repayment status. Sharable via WhatsApp for dispute resolution.</div>
+          <div class="req-tags"><span class="tag should">SHOULD</span><span class="tag free">jsPDF · Free</span></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="prd-h2" id="s4-3">F3 — Expense Tracking</h3>
+    <div class="req-list">
+      <div class="req">
+        <div class="req-id">F3.1</div>
+        <div>
+          <div class="req-title">Record daily expense by voice</div>
+          <div class="req-desc">User can say "Aaj doodh aur sabzi pe 120 rupaye gaye" and the app saves ₹120 as a food/grocery expense for today.</div>
+          <div class="req-tags"><span class="tag must">MUST</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F3.2</div>
+        <div>
+          <div class="req-title">Auto-categorization</div>
+          <div class="req-desc">AI automatically assigns a category from: Food, Transport, Medicine, House, Business, Other. No manual selection required.</div>
+          <div class="req-tags"><span class="tag should">SHOULD</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F3.3</div>
+        <div>
+          <div class="req-title">Daily total by voice</div>
+          <div class="req-desc">User asks "Aaj kitna kharch hua?" and the app responds with today's total and a breakdown by category.</div>
+          <div class="req-tags"><span class="tag should">SHOULD</span></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="prd-h2" id="s4-4">F4 — Reminders & Notifications</h3>
+    <div class="req-list">
+      <div class="req">
+        <div class="req-id">F4.1</div>
+        <div>
+          <div class="req-title">Telegram due-date reminders</div>
+          <div class="req-desc">A Telegram bot (free, no business account needed) sends a message when a loan is due in 3 days and on the due date. Message in user's chosen language: "Kal Ramesh ka ₹500 milna chahiye tha."</div>
+          <div class="req-tags"><span class="tag must">MUST</span><span class="tag free">Telegram Bot API · Free</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F4.2</div>
+        <div>
+          <div class="req-title">Browser push notifications</div>
+          <div class="req-desc">If user doesn't use Telegram, PWA push notifications (Web Push API) send the same reminders as native-style notifications on Android.</div>
+          <div class="req-tags"><span class="tag should">SHOULD</span><span class="tag free">Web Push API · Free</span></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="prd-h2" id="s4-5">F5 — Reports & Summaries</h3>
+    <div class="req-list">
+      <div class="req">
+        <div class="req-id">F5.1</div>
+        <div>
+          <div class="req-title">Monthly voice report</div>
+          <div class="req-desc">On the 1st of each month, the app generates a 30-second spoken summary via Groq + SpeechSynthesis: "Pichhle mahine aapne ₹3,200 liye aur ₹1,500 diye. Kharche mein sabse zyada ₹800 khana tha."</div>
+          <div class="req-tags"><span class="tag should">SHOULD</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F5.2</div>
+        <div>
+          <div class="req-title">Family view (literate caretaker)</div>
+          <div class="req-desc">A secondary screen (password-protected) shows a simple visual dashboard — bar charts, total figures — for literate family members who want to review finances.</div>
+          <div class="req-tags"><span class="tag could">COULD</span></div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="prd-h2" id="s4-6">F6 — Accessibility & UX</h3>
+    <div class="req-list">
+      <div class="req">
+        <div class="req-id">F6.1</div>
+        <div>
+          <div class="req-title">Icon-only navigation</div>
+          <div class="req-desc">All core screens must be accessible using only icons and color cues. No text label should be required to understand a button. 4 core icons on home: 🎙️ Speak · 💰 Loans · 🔔 Alerts · 📊 Reports.</div>
+          <div class="req-tags"><span class="tag must">MUST</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F6.2</div>
+        <div>
+          <div class="req-title">Large tap targets</div>
+          <div class="req-desc">All interactive elements must be at least 56×56px. Primary microphone button must be at least 72×72px. Minimum text size 18px where shown.</div>
+          <div class="req-tags"><span class="tag must">MUST</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F6.3</div>
+        <div>
+          <div class="req-title">Haptic feedback</div>
+          <div class="req-desc">Android haptic vibration on: mic start, successful save, error. Reinforces actions for users who may not look at screen.</div>
+          <div class="req-tags"><span class="tag should">SHOULD</span></div>
+        </div>
+      </div>
+      <div class="req">
+        <div class="req-id">F6.4</div>
+        <div>
+          <div class="req-title">Installable as PWA</div>
+          <div class="req-desc">App must pass PWA criteria (manifest.json, service worker, HTTPS) so it shows the "Add to Home Screen" prompt on Android Chrome. User should interact via a home screen icon, not a browser URL.</div>
+          <div class="req-tags"><span class="tag must">MUST</span></div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ══ 5. USER STORIES ══ -->
+    <h2 class="prd-h1" id="s5"><span class="sec-num">05</span> User Stories</h2>
+
+    <h3 class="prd-h2">Recording a loan</h3>
+    <div class="story"><strong>As</strong> Ramjibhai (primary user), <strong>I want to</strong> tell the app that I lent money to someone by just speaking their name and amount, <strong>so that</strong> I never forget about it and can ask for it back later with confidence.</div>
+    <div class="story"><strong>Given</strong> I open the app and press the microphone button, <em>when I say "Ramesh ne mujhse 500 liye, 2 hafte mein dega,"</em> <strong>then</strong> the app should save a loan record and speak back: "Ramesh ka ₹500 save ho gaya, 2 hafte baad milega."</div>
+
+    <h3 class="prd-h2">Checking who owes money</h3>
+    <div class="story"><strong>As</strong> Ramjibhai, <strong>I want to</strong> ask the app who still owes me money without looking at any screen, <strong>so that</strong> I can decide who to follow up with today.</div>
+    <div class="story"><strong>Given</strong> I have 3 outstanding loans recorded, <em>when I say "Kaun mujhe paisa dena hai?"</em> <strong>then</strong> the app should read all names and amounts aloud and tell me the total.</div>
+
+    <h3 class="prd-h2">Receiving a reminder</h3>
+    <div class="story"><strong>As</strong> Ramjibhai, <strong>I want to</strong> receive a Telegram message the day before a loan is due, <strong>so that</strong> I remember to collect it without having to check the app manually.</div>
+
+    <h3 class="prd-h2">Caretaker reviewing finances</h3>
+    <div class="story"><strong>As</strong> Dharmanshu (caretaker), <strong>I want to</strong> open a summary screen and see all my father's recorded loans and monthly spending, <strong>so that</strong> I can help him understand his finances and spot any issues.</div>
+
+    <h3 class="prd-h2">Generating proof</h3>
+    <div class="story"><strong>As</strong> Ramjibhai, <strong>I want to</strong> generate a simple document showing a loan I gave to someone, <strong>so that</strong> if they deny it I can show it to a community elder or family member as evidence.</div>
+
+    <hr class="divider">
+
+    <!-- ══ 6. FUNCTIONAL REQS ══ -->
+    <h2 class="prd-h1" id="s6"><span class="sec-num">06</span> Functional Requirements</h2>
+
+    <table>
+      <thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr><td><code>FR-01</code></td><td>System shall capture voice input using Web Speech API on Chrome/Edge Android</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-02</code></td><td>System shall send transcribed text to Groq API and receive structured JSON (type, name, amount, date)</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-03</code></td><td>System shall persist all loan records to Supabase with user_id, created_at, and all fields</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-04</code></td><td>System shall speak a confirmation after every successful save using SpeechSynthesis API in user's language</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-05</code></td><td>System shall store records locally in IndexedDB when offline and sync to Supabase when connection restores</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-06</code></td><td>System shall query all open loans by voice and read them back sorted by due date</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-07</code></td><td>System shall allow marking a loan as repaid by voice, recording timestamp</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-08</code></td><td>System shall send Telegram message for loans due in 3 days and on the due date</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-09</code></td><td>System shall support language selection: Hindi, Gujarati, English — affecting STT language code, AI prompt, and TTS voice</td><td><span class="tag p0">P0</span></td></tr>
+        <tr><td><code>FR-10</code></td><td>System shall generate a PDF proof document for any individual loan record</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td><code>FR-11</code></td><td>System shall auto-categorize expenses into 6 categories using AI</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td><code>FR-12</code></td><td>System shall generate and speak a monthly summary on the 1st of each month</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td><code>FR-13</code></td><td>System shall calculate simple interest on loans where a rate is provided</td><td><span class="tag p1">P1</span></td></tr>
+        <tr><td><code>FR-14</code></td><td>System shall display a family view dashboard for caretaker access</td><td><span class="tag p2">P2</span></td></tr>
+      </tbody>
+    </table>
+
+    <hr class="divider">
+
+    <!-- ══ 7. NON-FUNCTIONAL ══ -->
+    <h2 class="prd-h1" id="s7"><span class="sec-num">07</span> Non-Functional Requirements</h2>
+
+    <table>
+      <thead><tr><th>Category</th><th>Requirement</th><th>Target</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Performance</strong></td><td>Voice-to-confirmation round trip (STT + AI + TTS)</td><td>&lt; 5 seconds on 4G</td></tr>
+        <tr><td><strong>Performance</strong></td><td>App initial load time (First Contentful Paint)</td><td>&lt; 3 seconds on 4G</td></tr>
+        <tr><td><strong>Reliability</strong></td><td>Offline loan recording without any internet connection</td><td>100% functional</td></tr>
+        <tr><td><strong>Compatibility</strong></td><td>Android Chrome 90+ (primary), Chrome desktop (secondary)</td><td>Required</td></tr>
+        <tr><td><strong>Compatibility</strong></td><td>Low-end Android devices (2GB RAM, Snapdragon 4xx)</td><td>Required</td></tr>
+        <tr><td><strong>Accessibility</strong></td><td>All core actions completable without reading any text</td><td>Required</td></tr>
+        <tr><td><strong>Security</strong></td><td>User authentication via Supabase Auth (phone OTP or magic link)</td><td>Required</td></tr>
+        <tr><td><strong>Security</strong></td><td>Row-level security on all Supabase tables (users see only their data)</td><td>Required</td></tr>
+        <tr><td><strong>Data</strong></td><td>No financial data sent to third-party analytics services</td><td>Required</td></tr>
+        <tr><td><strong>Cost</strong></td><td>Monthly infrastructure cost for pilot (≤50 users)</td><td>₹ 0</td></tr>
+        <tr><td><strong>Installability</strong></td><td>PWA installable via "Add to Home Screen" on Android Chrome</td><td>Required</td></tr>
+      </tbody>
+    </table>
+
+    <hr class="divider">
+
+    <!-- ══ 8. ARCHITECTURE ══ -->
+    <h2 class="prd-h1" id="s8"><span class="sec-num">08</span> Technical Architecture</h2>
+
+    <h3 class="prd-h2" id="s8-1">Free stack map</h3>
+
+    <div class="arch-box">
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;">Voice request flow</div>
+      <div class="layer client">🎤 USER SPEAKS → Web Speech API (browser native, free ∞)</div>
+      <div class="arch-arrow">↓ transcript text</div>
+      <div class="layer api">⚡ VERCEL EDGE FUNCTION → validates + rate-limits → calls Groq</div>
+      <div class="arch-arrow">↓ POST /v1/chat/completions</div>
+      <div class="layer ai">🧠 GROQ API (Llama 3.1 70B) → intent extraction → JSON response (free: 14,400 req/day)</div>
+      <div class="arch-arrow">↓ { type, person, amount, date }</div>
+      <div class="layer data">🗄️ SUPABASE POSTGRES → insert record with user_id + timestamp (free: 500MB)</div>
+      <div class="arch-arrow">↓ success ack</div>
+      <div class="layer client">🔊 SpeechSynthesis API → speaks confirmation in user's language (browser native, free ∞)</div>
+    </div>
+
+    <div class="callout amber">
+      <strong>Offline fallback:</strong> If no internet is detected, the Vercel call is skipped. The raw transcript is stored in IndexedDB with <code>status: "pending_ai"</code>. When connection returns, a service worker processes the backlog through Groq and syncs to Supabase. The user hears a local cached confirmation immediately to avoid confusion.
+    </div>
+
+    <h3 class="prd-h2" id="s8-2">Data models</h3>
+
+    <div class="prd-h3">transactions table (Supabase)</div>
+    <table>
+      <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>uuid, PK</td><td>Auto-generated primary key</td></tr>
+        <tr><td><code>user_id</code></td><td>uuid, FK → users</td><td>Owner of this record (RLS enforced)</td></tr>
+        <tr><td><code>type</code></td><td>enum</td><td><code>lent</code> | <code>borrowed</code> | <code>expense</code></td></tr>
+        <tr><td><code>person_name</code></td><td>text, nullable</td><td>Name of the other person (null for expenses)</td></tr>
+        <tr><td><code>amount</code></td><td>numeric</td><td>Amount in INR (rupees)</td></tr>
+        <tr><td><code>due_date</code></td><td>date, nullable</td><td>Optional repayment due date</td></tr>
+        <tr><td><code>interest_rate</code></td><td>numeric, nullable</td><td>Monthly interest rate %, if applicable</td></tr>
+        <tr><td><code>category</code></td><td>text, nullable</td><td>Expense category (food / transport / medicine / house / business / other)</td></tr>
+        <tr><td><code>status</code></td><td>enum</td><td><code>open</code> | <code>settled</code></td></tr>
+        <tr><td><code>settled_at</code></td><td>timestamptz, nullable</td><td>When the loan was marked repaid</td></tr>
+        <tr><td><code>raw_transcript</code></td><td>text</td><td>Original voice transcript (for audit/debug)</td></tr>
+        <tr><td><code>created_at</code></td><td>timestamptz</td><td>Auto-set on insert</td></tr>
+        <tr><td><code>offline_id</code></td><td>text, nullable</td><td>Local IndexedDB ID for offline-created records</td></tr>
+      </tbody>
+    </table>
+
+    <div class="prd-h3">Groq prompt template</div>
+    <div class="callout mono" style="font-size:12px;">
+      System: "You are a financial assistant that extracts structured data from Hindi and Gujarati speech. Always respond with ONLY valid JSON. Fields: type ('lent'|'borrowed'|'expense'), person_name (string|null), amount (number, INR), due_date ('YYYY-MM-DD'|null), category (string|null), confidence (0-1)."<br><br>
+      User: "{transcript}"
+    </div>
+
+    <hr class="divider">
+
+    <!-- ══ 9. OUT OF SCOPE ══ -->
+    <h2 class="prd-h1" id="s9"><span class="sec-num">09</span> Out of Scope (v1.0)</h2>
+
+    <table>
+      <thead><tr><th>Feature</th><th>Reason excluded</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Native Android/iOS app</strong></td><td>PWA covers all needed capabilities; native app requires paid developer accounts and build infrastructure</td></tr>
+        <tr><td><strong>WhatsApp Business API</strong></td><td>Requires Meta Business verification and paid messaging; Telegram Bot API is free and equivalent</td></tr>
+        <tr><td><strong>Bank account integration</strong></td><td>Requires RBI-licensed open banking API access, out of scope for student project</td></tr>
+        <tr><td><strong>Multi-user shared ledger</strong></td><td>Adds significant complexity to data model and conflict resolution; post-v1 feature</td></tr>
+        <tr><td><strong>UPI payment integration</strong></td><td>Requires payment aggregator licensing and compliance</td></tr>
+        <tr><td><strong>Compound interest</strong></td><td>Simple interest sufficient for v1; compound adds confusion without enough user benefit yet</td></tr>
+        <tr><td><strong>Biometric authentication</strong></td><td>OTP via phone number is sufficient and simpler for the target user</td></tr>
+      </tbody>
+    </table>
+
+    <hr class="divider">
+
+    <!-- ══ 10. RISKS ══ -->
+    <h2 class="prd-h1" id="s10"><span class="sec-num">10</span> Risks & Mitigations</h2>
+
+    <table>
+      <thead><tr><th>Risk</th><th>Level</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Gujarati STT accuracy on regional accents</strong><br><span style="font-size:12px;color:var(--ink3);">Web Speech API may misrecognize Gujarati dialect variations</span></td>
+          <td><span class="risk-pill risk-high">High</span></td>
+          <td>Fallback: user can tap to correct a word. Confidence score below 0.7 triggers "please repeat" prompt. Optional Whisper local model for better accuracy.</td>
+        </tr>
+        <tr>
+          <td><strong>Groq API rate limit hit</strong><br><span style="font-size:12px;color:var(--ink3);">14,400 req/day free limit exceeded with many users</span></td>
+          <td><span class="risk-pill risk-medium">Medium</span></td>
+          <td>Fallback to Google Gemini 1.5 Flash free tier (1M tokens/day). Cache common patterns locally. Limit to ~50 pilot users in v1.0.</td>
+        </tr>
+        <tr>
+          <td><strong>User drops off after onboarding</strong><br><span style="font-size:12px;color:var(--ink3);">Target users may find initial setup confusing</span></td>
+          <td><span class="risk-pill risk-medium">Medium</span></td>
+          <td>2-minute Gujarati onboarding video. Caretaker sets up once. 5 "quick start" example commands shown on first launch.</td>
+        </tr>
+        <tr>
+          <td><strong>Offline sync conflicts</strong><br><span style="font-size:12px;color:var(--ink3);">Same record edited offline and online simultaneously</span></td>
+          <td><span class="risk-pill risk-medium">Medium</span></td>
+          <td>App is append-only for v1.0 — records are never edited after creation, only marked settled. Eliminates most conflict scenarios.</td>
+        </tr>
+        <tr>
+          <td><strong>Supabase free tier limit</strong><br><span style="font-size:12px;color:var(--ink3);">500MB database limit</span></td>
+          <td><span class="risk-pill risk-low">Low</span></td>
+          <td>Each transaction record is ~500 bytes. 500MB = 1M records — sufficient for thousands of pilot users for years.</td>
+        </tr>
+        <tr>
+          <td><strong>Web Speech API browser support</strong><br><span style="font-size:12px;color:var(--ink3);">Not supported on Firefox or older Android</span></td>
+          <td><span class="risk-pill risk-low">Low</span></td>
+          <td>Chrome is dominant on Android India (85%+ market share). App onboarding explicitly states "requires Chrome browser."</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr class="divider">
+
+    <!-- ══ 11. TIMELINE ══ -->
+    <h2 class="prd-h1" id="s11"><span class="sec-num">11</span> Delivery Timeline</h2>
+
+    <table>
+      <thead><tr><th>Phase</th><th>Weeks</th><th>Deliverable</th><th>Free tools set up</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Phase 1</strong><br>Setup & Design</td>
+          <td>1–2</td>
+          <td>GitHub repo live, Supabase schema created, Vercel deploy pipeline active, Groq key obtained, wireframes done</td>
+          <td>GitHub · Supabase · Vercel · Groq · Figma</td>
+        </tr>
+        <tr>
+          <td><strong>Phase 2</strong><br>Voice MVP</td>
+          <td>3–5</td>
+          <td>Core voice pipeline working: speak → AI → save → confirmation. Loans recordable and retrievable by voice. Hindi working.</td>
+          <td>Web Speech API · Groq · Supabase · SpeechSynthesis</td>
+        </tr>
+        <tr>
+          <td><strong>Phase 3</strong><br>Offline + Alerts</td>
+          <td>6–7</td>
+          <td>Offline mode (IndexedDB + Workbox). Telegram reminder bot live. Gujarati language support. First internal test.</td>
+          <td>IndexedDB · Workbox · Telegram Bot API</td>
+        </tr>
+        <tr>
+          <td><strong>Phase 4</strong><br>Reports + Polish</td>
+          <td>8–9</td>
+          <td>Monthly voice reports. PDF export via jsPDF. Expense categories. Icon-only nav finalized. Haptic feedback.</td>
+          <td>jsPDF · SpeechSynthesis</td>
+        </tr>
+        <tr>
+          <td><strong>Phase 5</strong><br>Pilot Launch</td>
+          <td>10</td>
+          <td>5–10 real pilot users. Gujarati accent tuning. 2-min onboarding video. Bugs fixed. Handoff documentation to Antigravity.</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr class="divider">
+
+    <!-- ══ 12. OPEN QUESTIONS ══ -->
+    <h2 class="prd-h1" id="s12"><span class="sec-num">12</span> Open Questions</h2>
+
+    <table>
+      <thead><tr><th>#</th><th>Question</th><th>Owner</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Q1</td>
+          <td>Should the primary authentication method be phone OTP or a simple 4-digit PIN? OTP requires phone number; PIN is simpler but less secure.</td>
+          <td>Dharmanshu</td>
+          <td><span class="tag should">Open</span></td>
+        </tr>
+        <tr>
+          <td>Q2</td>
+          <td>Is Telegram acceptable for the target user, or do they need WhatsApp? (If WhatsApp is mandatory, a paid solution will be needed post-MVP.)</td>
+          <td>Pilot users</td>
+          <td><span class="tag should">Open</span></td>
+        </tr>
+        <tr>
+          <td>Q3</td>
+          <td>Should person names be stored as typed by the caretaker initially (to improve recognition), or purely from voice extraction?</td>
+          <td>Dharmanshu</td>
+          <td><span class="tag should">Open</span></td>
+        </tr>
+        <tr>
+          <td>Q4</td>
+          <td>What happens if the AI misidentifies an amount (₹500 vs ₹5000)? Is a correction flow needed, and if so, how does a non-literate user correct it?</td>
+          <td>UX Design</td>
+          <td><span class="tag should">Open</span></td>
+        </tr>
+        <tr>
+          <td>Q5</td>
+          <td>Should the Groq API key be stored in Vercel environment variables (recommended) or handled some other way? API key must never be exposed client-side.</td>
+          <td>Developer</td>
+          <td><span class="tag free">Decided: Vercel env vars</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout green" style="margin-top:32px;">
+      <strong>Document status:</strong> This PRD is a living document. Sections 9–12 should be revisited after each build phase. All open questions in Section 12 should be resolved before Phase 2 begins.
+    </div>
+
+  </main>
+</div>
+
+<div class="doc-footer">
+  <span>HisaabBot · PRD v1.0 · Prepared for Antigravity</span>
+  <span>Build cost: ₹ 0 · Stack: React + Groq + Supabase + Vercel + Telegram</span>
+</div>
+
+</body>
+</html>
