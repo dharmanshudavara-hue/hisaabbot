@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import BottomNav from '../components/BottomNav';
 import { WalletIcon, ArrowUpIcon, ArrowDownIcon, CheckCircleIcon, ClockIcon, ChevronRightIcon, TrashIcon } from '../components/Icons';
-import { getOpenLoans, getSettledLoans, getAllTransactions, settleLoan, deleteTransaction } from '../../lib/db';
+import { getOpenLoans, getSettledLoans, getAllTransactions, settleLoan, deleteTransaction, calculateInterest } from '../../lib/db';
 import { speak } from '../../lib/speech';
 import { getSetting } from '../../lib/db';
 
@@ -27,25 +27,33 @@ export default function LoansPage() {
       setOpenLoans(open);
       setSettledLoansData(settled);
 
-      const lentTotal = open.filter(t => t.type === 'lent').reduce((s, t) => s + t.amount, 0);
-      const borrowedTotal = open.filter(t => t.type === 'borrowed').reduce((s, t) => s + t.amount, 0);
+      const lentTotal = open.filter(t => t.type === 'lent').reduce((s, t) => {
+        const { totalWithInterest } = calculateInterest(t.amount, t.interest_rate, t.created_at);
+        return s + totalWithInterest;
+      }, 0);
+      const borrowedTotal = open.filter(t => t.type === 'borrowed').reduce((s, t) => {
+        const { totalWithInterest } = calculateInterest(t.amount, t.interest_rate, t.created_at);
+        return s + totalWithInterest;
+      }, 0);
       setTotals({ lent: lentTotal, borrowed: borrowedTotal });
     } catch (err) {
       console.error('Error loading loans:', err);
     }
   };
 
-  const handleSettle = async (id, personName, amount) => {
+  const handleSettle = async (id, personName, amount, interest) => {
     setSettlingId(id);
     try {
       await settleLoan(id);
       if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
       
+      const totalAmount = amount + (interest || 0);
+      
       const msg = language === 'hindi'
-        ? `${personName} ka ₹${amount} settled ho gaya`
+        ? `${personName} ka ₹${totalAmount} settled ho gaya`
         : language === 'gujarati'
-        ? `${personName} na ₹${amount} settled thai gaya`
-        : `₹${amount} from ${personName} settled`;
+        ? `${personName} na ₹${totalAmount} settled thai gaya`
+        : `₹${totalAmount} from ${personName} settled`;
       
       await speak(msg, language);
       await loadData();
@@ -164,7 +172,33 @@ export default function LoansPage() {
               </div>
             </div>
           ) : (
-            currentList.map((loan) => (
+            currentList.map((loan) => {
+              // Calculate interest if loan is open, otherwise interest is frozen or wasn't tracked historically.
+              // For v1, if it's settled, we just show original amount, or we could calculate up to settled_at.
+              const calculationDate = activeTab === 'settled' && loan.settled_at ? loan.settled_at : undefined;
+              let calcData = { interest: 0, totalWithInterest: loan.amount, monthsElapsed: 0 };
+              
+              if (loan.interest_rate) {
+                // If it's settled, use settled_at instead of now to calculate interest
+                // Need to slightly modify calculateInterest logic for settled loans if we want accurate history,
+                // but since calculateInterest takes 'now' by default, we can just pass the start date.
+                // Actually, let's just use the current time for simplicity unless it's settled.
+                // We'll calculate it inline if it's settled.
+                if (activeTab === 'settled' && loan.settled_at) {
+                    const diffMs = new Date(loan.settled_at) - new Date(loan.created_at);
+                    const months = diffMs / (1000 * 60 * 60 * 24 * 30.44);
+                    if(months > 0) {
+                        const i = Math.round(loan.amount * (loan.interest_rate / 100) * months);
+                        calcData = { interest: i, totalWithInterest: loan.amount + i, monthsElapsed: Math.round(months * 10) / 10 };
+                    }
+                } else {
+                    calcData = calculateInterest(loan.amount, loan.interest_rate, loan.created_at);
+                }
+              }
+
+              const { interest, totalWithInterest } = calcData;
+
+              return (
               <div key={loan.id} className="loan-card" id={`loan-${loan.id}`}>
                 <div className={`loan-avatar ${loan.type}`}>
                   {loan.person_name ? loan.person_name.charAt(0).toUpperCase() : '?'}
@@ -192,12 +226,22 @@ export default function LoansPage() {
                         <CheckCircleIcon size={12} /> Settled
                       </span>
                     )}
+                    {loan.interest_rate && (
+                      <span className="interest-badge">
+                         {loan.interest_rate}%
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="loan-amount">
                   <div className={`amount ${loan.type}`}>
-                    ₹{loan.amount.toLocaleString('en-IN')}
+                    ₹{totalWithInterest.toLocaleString('en-IN')}
                   </div>
+                  {interest > 0 && (
+                    <div className="interest-detail" style={{ justifyContent: 'flex-end', marginTop: 2 }}>
+                       +₹{interest.toLocaleString('en-IN')} int.
+                    </div>
+                  )}
                   {activeTab === 'open' && (
                     <button
                       className="btn btn-ghost"
@@ -213,7 +257,7 @@ export default function LoansPage() {
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSettle(loan.id, loan.person_name, loan.amount);
+                        handleSettle(loan.id, loan.person_name, loan.amount, interest);
                       }}
                       disabled={settlingId === loan.id}
                       id={`settle-${loan.id}`}
@@ -245,7 +289,7 @@ export default function LoansPage() {
                   </button>
                 </div>
               </div>
-            ))
+            )})
           )}
         </div>
       </div>
@@ -254,3 +298,4 @@ export default function LoansPage() {
     </div>
   );
 }
+

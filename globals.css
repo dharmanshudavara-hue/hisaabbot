@@ -1734,3 +1734,136 @@ body {
   }
 }
 
+/* ═══════════════════════════════════════════ */
+/* ── F1.4: Clarification Flow Styles ────── */
+/* ═══════════════════════════════════════════ */
+
+.mic-button.clarify {
+  background: linear-gradient(145deg, var(--amber-500), var(--amber-600));
+  animation: clarify-pulse 2s ease-in-out infinite;
+  box-shadow:
+    0 0 0 0 rgba(245, 158, 11, 0.4),
+    var(--shadow-lg),
+    0 0 60px var(--amber-glow);
+}
+
+.mic-button.clarify .mic-ring {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+@keyframes clarify-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(245, 158, 11, 0.4),
+      var(--shadow-lg),
+      0 0 60px var(--amber-glow);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 16px rgba(245, 158, 11, 0),
+      var(--shadow-lg),
+      0 0 80px var(--amber-glow);
+    transform: scale(1.04);
+  }
+}
+
+.mic-container.clarify {
+  background: radial-gradient(ellipse at center bottom, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
+}
+
+/* Clarification round indicator */
+.clarify-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  animation: auth-fade-in 0.35s ease;
+}
+
+.clarify-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.clarify-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-medium);
+  transition: all 0.3s ease;
+}
+
+.clarify-dot.active {
+  background: var(--amber-400);
+  box-shadow: 0 0 8px var(--amber-glow);
+}
+
+.clarify-label {
+  font-size: 0.688rem;
+  font-weight: 600;
+  color: var(--amber-400);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Cancel button during clarification */
+.clarify-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--red-400);
+  font-family: inherit;
+  font-size: 0.813rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+  animation: auth-fade-in 0.35s ease;
+}
+
+.clarify-cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.clarify-cancel-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ═══════════════════════════════════════════ */
+/* ── F2.4: Interest Rate Badge Styles ───── */
+/* ═══════════════════════════════════════════ */
+
+.interest-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--amber-400);
+  font-size: 0.688rem;
+  font-weight: 600;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.interest-detail {
+  font-size: 0.75rem;
+  color: var(--amber-400);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.interest-detail .total-amount {
+  font-size: 0.813rem;
+  font-weight: 700;
+}

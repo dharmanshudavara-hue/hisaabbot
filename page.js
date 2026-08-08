@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import BottomNav from './components/BottomNav';
-import { MicIcon, CheckCircleIcon, LoaderIcon, VolumeIcon } from './components/Icons';
+import { MicIcon, CheckCircleIcon, LoaderIcon, VolumeIcon, XCircleIcon } from './components/Icons';
 import { useSpeechRecognition, speak, parseTranscript, unlockAudio } from '../lib/speech';
 import { addTransaction, getSetting, setSetting, getAllTransactions } from '../lib/db';
+
+const MAX_CLARIFICATION_ROUNDS = 2;
 
 const STATUS_MESSAGES = {
   hindi: {
@@ -13,6 +15,7 @@ const STATUS_MESSAGES = {
     processing: 'समझ रहा हूं...',
     success: 'सेव हो गया!',
     error: 'फिर से बोलें',
+    clarify: 'जवाब दें — माइक दबाएं',
   },
   gujarati: {
     idle: 'બોલવા માટે દબાવી રાખો',
@@ -20,6 +23,7 @@ const STATUS_MESSAGES = {
     processing: 'સમજી રહ્યો છું...',
     success: 'સેવ થઈ ગયું!',
     error: 'ફરી બોલો',
+    clarify: 'જવાબ આપો — માઇક દબાવો',
   },
   english: {
     idle: 'Hold to speak',
@@ -27,14 +31,31 @@ const STATUS_MESSAGES = {
     processing: 'Understanding...',
     success: 'Saved!',
     error: 'Try again',
+    clarify: 'Answer — hold the mic',
   },
 };
 
+// Question mark icon for clarification state
+function QuestionIcon({ size = 24, ...props }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
 export default function HomePage() {
   const [language, setLanguage] = useState('hindi');
-  const [status, setStatus] = useState('idle'); // idle, listening, processing, success, error
+  const [status, setStatus] = useState('idle'); // idle, listening, processing, success, error, clarify
   const [displayText, setDisplayText] = useState('');
   const [parsedData, setParsedData] = useState(null);
+
+  // Clarification flow state
+  const [clarificationRound, setClarificationRound] = useState(0);
+  const [clarificationContext, setClarificationContext] = useState(null);
+  // { original_transcript, ai_question, partial_data }
 
   const { isListening, transcript, error: speechError, startListening, stopListening } =
     useSpeechRecognition(language);
@@ -77,6 +98,12 @@ export default function HomePage() {
 
   const handleProcessTranscript = async (text) => {
     if (!text || text.trim().length === 0) {
+      // If we were in clarification mode and got empty input, stay in clarify
+      if (status === 'listening' && clarificationContext) {
+        setStatus('clarify');
+        setDisplayText(clarificationContext.ai_question);
+        return;
+      }
       setStatus('idle');
       return;
     }
@@ -87,16 +114,60 @@ export default function HomePage() {
     try {
       const all = await getAllTransactions();
       const recentContext = all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 30);
-      
-      const result = await parseTranscript(text, language, recentContext);
+
+      // Pass clarification context if we're in a follow-up round
+      const result = await parseTranscript(text, language, recentContext, clarificationContext);
 
       if (result.success && result.data) {
         const data = result.data;
 
-        // Handle query types
+        // ─── Handle CLARIFICATION response ───
+        if (data.type === 'clarification') {
+          const nextRound = clarificationRound + 1;
+
+          if (nextRound > MAX_CLARIFICATION_ROUNDS) {
+            // Exceeded max rounds — give up
+            setStatus('error');
+            setClarificationRound(0);
+            setClarificationContext(null);
+            const giveUpMsg =
+              language === 'hindi' ? 'मुझे समझ नहीं आया, कृपया पूरी बात फिर से बोलें' :
+              language === 'gujarati' ? 'મને સમજાયું નહીં, કૃપા કરીને ફરી પૂરી વાત બોલો' :
+              'I could not understand, please try the full sentence again';
+            setDisplayText(giveUpMsg);
+            await speak(giveUpMsg, language);
+            setTimeout(() => {
+              setStatus('idle');
+              setDisplayText('');
+              setParsedData(null);
+            }, 4000);
+            return;
+          }
+
+          // Enter clarification mode
+          setClarificationRound(nextRound);
+          setClarificationContext({
+            original_transcript: clarificationContext?.original_transcript || text,
+            ai_question: data.summary,
+            partial_data: data.partial_data || {},
+          });
+          setStatus('clarify');
+          setDisplayText(data.summary);
+
+          // Haptic to signal question
+          if (navigator.vibrate) navigator.vibrate([30, 80, 30]);
+
+          // Speak the clarification question
+          await speak(data.summary, language);
+          return;
+        }
+
+        // ─── Handle QUERY response ───
         if (data.type === 'query') {
           setStatus('success');
           setParsedData(data);
+          setClarificationRound(0);
+          setClarificationContext(null);
           if (data.summary) {
             setDisplayText(data.summary);
             await speak(data.summary, language);
@@ -109,9 +180,11 @@ export default function HomePage() {
           return;
         }
 
-        // Handle AI clarification questions or errors
+        // ─── Handle ERROR response ───
         if (data.type === 'error') {
           setStatus('error');
+          setClarificationRound(0);
+          setClarificationContext(null);
           const errorMsg = data.summary || (
             language === 'hindi' ? 'मुझे समझ नहीं आया, कृपया फिर से बोलें' :
             language === 'gujarati' ? 'મને સમજાયું નહીં, કૃપા કરીને ફરી બોલો' :
@@ -127,15 +200,19 @@ export default function HomePage() {
           return;
         }
 
-        // Save transaction
+        // ─── Handle successful TRANSACTION ───
         if (data.amount && data.amount > 0) {
           const saved = await addTransaction({
             ...data,
-            raw_transcript: text,
+            raw_transcript: clarificationContext
+              ? `${clarificationContext.original_transcript} → ${text}`
+              : text,
           });
 
           setStatus('success');
           setParsedData(data);
+          setClarificationRound(0);
+          setClarificationContext(null);
 
           // Haptic feedback
           if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
@@ -152,6 +229,8 @@ export default function HomePage() {
           }, 4000);
         } else {
           setStatus('error');
+          setClarificationRound(0);
+          setClarificationContext(null);
           const errorMsg = language === 'hindi' ? 'राशि समझ नहीं आई, फिर से बोलें' :
                           language === 'gujarati' ? 'રકમ સમજાઈ નહીં, ફરી બોલો' :
                           'Could not understand the amount, please try again';
@@ -168,6 +247,8 @@ export default function HomePage() {
     } catch (err) {
       console.error('Process error:', err);
       setStatus('error');
+      setClarificationRound(0);
+      setClarificationContext(null);
       const errorMsg = language === 'hindi' ? 'कुछ गलत हो गया, फिर से कोशिश करें' :
                       language === 'gujarati' ? 'કંઈક ખોટું થયું, ફરી પ્રયાસ કરો' :
                       'Something went wrong, please try again';
@@ -178,6 +259,15 @@ export default function HomePage() {
       }, 3000);
     }
   };
+
+  const cancelClarification = useCallback(() => {
+    setClarificationRound(0);
+    setClarificationContext(null);
+    setStatus('idle');
+    setDisplayText('');
+    setParsedData(null);
+    if (navigator.vibrate) navigator.vibrate(30);
+  }, []);
 
   const micRef = useRef(null);
   const isHoldingRef = useRef(false);
@@ -190,9 +280,12 @@ export default function HomePage() {
     unlockAudio();
     isHoldingRef.current = true;
     setParsedData(null);
-    setDisplayText('');
+    // Don't clear clarification context — we need it for follow-up rounds
+    if (!clarificationContext) {
+      setDisplayText('');
+    }
     startListening();
-  }, [startListening, status]);
+  }, [startListening, status, clarificationContext]);
 
   const handleMicUp = useCallback((e) => {
     e.preventDefault();
@@ -237,12 +330,14 @@ export default function HomePage() {
     if (status === 'listening') cls += ' listening';
     if (status === 'processing') cls += ' processing';
     if (status === 'success') cls += ' success';
+    if (status === 'clarify') cls += ' clarify';
     return cls;
   };
 
   const getMicIcon = () => {
     if (status === 'processing') return <LoaderIcon size={48} />;
     if (status === 'success') return <CheckCircleIcon size={48} />;
+    if (status === 'clarify') return <QuestionIcon size={48} />;
     return <MicIcon size={48} />;
   };
 
@@ -306,7 +401,26 @@ export default function HomePage() {
       </div>
 
       {/* Mic Section */}
-      <div className={`mic-container ${status === 'listening' ? 'listening' : ''}`}>
+      <div className={`mic-container ${status === 'listening' ? 'listening' : ''} ${status === 'clarify' ? 'clarify' : ''}`}>
+        {/* Clarification round indicator */}
+        {status === 'clarify' && clarificationRound > 0 && (
+          <div className="clarify-indicator">
+            <div className="clarify-dots">
+              {Array.from({ length: MAX_CLARIFICATION_ROUNDS }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`clarify-dot ${i < clarificationRound ? 'active' : ''}`}
+                />
+              ))}
+            </div>
+            <span className="clarify-label">
+              {language === 'hindi' ? `सवाल ${clarificationRound}/${MAX_CLARIFICATION_ROUNDS}` :
+               language === 'gujarati' ? `સવાલ ${clarificationRound}/${MAX_CLARIFICATION_ROUNDS}` :
+               `Question ${clarificationRound}/${MAX_CLARIFICATION_ROUNDS}`}
+            </span>
+          </div>
+        )}
+
         {/* Waveform - only show when listening */}
         {status === 'listening' && (
           <div className="waveform">
@@ -325,7 +439,7 @@ export default function HomePage() {
           onPointerLeave={handleMicLeave}
           onPointerCancel={handleMicUp}
           id="mic-button"
-          aria-label={isListening ? 'Recording... release to stop' : 'Hold to start recording'}
+          aria-label={isListening ? 'Recording... release to stop' : status === 'clarify' ? 'Hold to answer the question' : 'Hold to start recording'}
           style={{ touchAction: 'none', userSelect: 'none' }}
         >
           <div className="mic-ring" />
@@ -336,6 +450,23 @@ export default function HomePage() {
 
         {/* Status */}
         <p className="mic-status">{getStatusText()}</p>
+
+        {/* Cancel button during clarification */}
+        {status === 'clarify' && (
+          <button
+            className="clarify-cancel-btn"
+            onClick={cancelClarification}
+            id="clarify-cancel"
+            aria-label="Cancel"
+          >
+            <XCircleIcon size={18} />
+            <span>
+              {language === 'hindi' ? 'रद्द करें' :
+               language === 'gujarati' ? 'રદ કરો' :
+               'Cancel'}
+            </span>
+          </button>
+        )}
 
         {/* Parsed Result Card */}
         {parsedData && status === 'success' && (
@@ -365,6 +496,11 @@ export default function HomePage() {
             {parsedData.due_date && (
               <p style={{ fontSize: '0.813rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
                 Due: {new Date(parsedData.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            )}
+            {parsedData.interest_rate && (
+              <p style={{ fontSize: '0.813rem', color: 'var(--amber-400)', marginTop: 4 }}>
+                {parsedData.interest_rate}% {language === 'hindi' ? 'मासिक ब्याज' : language === 'gujarati' ? 'માસિક વ્યાજ' : 'monthly interest'}
               </p>
             )}
           </div>
